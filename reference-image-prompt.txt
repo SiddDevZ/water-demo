@@ -1,0 +1,9 @@
+A photorealistic interactive water garden demo: a small, clear blue natural spring in a peaceful Japanese-inspired meadow, framed by lush grass, pink cherry blossoms, delicate wildflowers, a few ferns and warm mossy stones.
+
+Capture the joyful colors and welcoming atmosphere of a beautiful cozy adventure game, rendered with realistic materials and natural lighting: fresh spring greens, soft blossom pinks, luminous turquoise-blue water, warm cream stone, a rich blue sky and a few sunlit cumulus clouds.
+
+The water is the hero, occupying most of the foreground. Show a visible sandy and pebble bottom, gradually deepening blue toward the center, believable refraction and accurate reflections of trees and clouds. A single small pebble has just struck the surface: a delicate splash crown and several thin, expanding waves bend the reflections naturally. Gentle ripples catch small points of sunlight. A few koi are visible underwater; one leaf and a tiny paper boat float nearby.
+
+Simple, carefully composed landscaping with fuller planting around the edges and open water in the center. Slightly elevated shore-level camera, wide landscape composition, premium real-time game screenshot, physically based rendering, crisp detail, soft natural shadows and clear air.
+
+Avoid fog, white haze, painted white patterns underwater, plastic water, oversized ocean waves, crowded rock piles, pool walls, floating islands, exaggerated fantasy objects, heavy bloom, text and interface overlays.

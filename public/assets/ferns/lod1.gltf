@@ -1,0 +1,163 @@
+{
+  "asset": {
+    "generator": "highland-run/tools/build-vegetation.mjs (meshoptimizer 1.1.1)",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "selected vegetation variant",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "fern_02_b"
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Plane.024",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "mode": 4,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "alphaCutoff": 0.5,
+      "alphaMode": "MASK",
+      "doubleSided": true,
+      "name": "fern_02",
+      "normalTexture": {
+        "index": 0
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1
+        },
+        "metallicFactor": 0,
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      }
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    }
+  ],
+  "images": [
+    {
+      "mimeType": "image/jpeg",
+      "name": "fern_02_nor_gl",
+      "uri": "textures/fern_02_nor_gl_1k.jpg"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "fern_02_diff-fern_02_alpha",
+      "uri": "textures/fern_02_rgba_1k.png"
+    },
+    {
+      "mimeType": "image/jpeg",
+      "name": "fern_02_rough",
+      "uri": "textures/fern_02_arm_1k.jpg"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 789,
+      "type": "VEC3",
+      "min": [
+        -0.5281425714492798,
+        -0.030510280281305313,
+        -0.421874463558197
+      ],
+      "max": [
+        0.4608733057975769,
+        0.39718443155288696,
+        0.4718152582645416
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 789,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 789,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 2997,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 9468,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 9468,
+      "byteLength": 9468,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 18936,
+      "byteLength": 6312,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 25248,
+      "byteLength": 5994,
+      "target": 34963
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 31242,
+      "uri": "lod1.bin"
+    }
+  ]
+}

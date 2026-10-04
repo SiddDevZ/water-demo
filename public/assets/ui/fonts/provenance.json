@@ -1,0 +1,11 @@
+[
+  {
+    "file": "pixelify-sans.woff2",
+    "name": "Pixelify Sans (variable, wght 400-700)",
+    "author": "Stefie Justprince",
+    "license": "SIL Open Font License 1.1 (PixelifySans-OFL.txt)",
+    "source": "https://github.com/google/fonts/tree/main/ofl/pixelifysans",
+    "converted": "ttf -> woff2 with fontTools, unmodified glyphs",
+    "date": "2026-09-29"
+  }
+]

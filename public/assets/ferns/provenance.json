@@ -1,0 +1,845 @@
+{
+  "schemaVersion": 1,
+  "id": "fern_02",
+  "source": {
+    "assetId": "fern_02",
+    "name": "Fern 02",
+    "url": "https://polyhaven.com/a/fern_02",
+    "metadataUrl": "https://api.polyhaven.com/files/fern_02",
+    "authors": {
+      "Rob Tuytel": "scanning",
+      "Rico Cilliers": "modeling"
+    },
+    "license": {
+      "id": "CC0-1.0",
+      "name": "Creative Commons CC0 1.0 Universal",
+      "url": "https://polyhaven.com/license",
+      "legalCode": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "selectedNode": 0,
+    "selectedNodeName": "fern_02_b",
+    "selectedSourceNodes": [
+      0
+    ],
+    "textureResolution": "official 1k (not geometry resolution)",
+    "stats": {
+      "triangles": 2384,
+      "vertices": 1660,
+      "submeshes": 1,
+      "bounds": {
+        "min": [
+          -0.5281425714492798,
+          -0.030510280281305313,
+          -0.421874463558197
+        ],
+        "max": [
+          0.4616048336029053,
+          0.39718443155288696,
+          0.4718152582645416
+        ],
+        "size": [
+          0.9897474050521851,
+          0.4276947118341923,
+          0.8936897218227386
+        ]
+      },
+      "primitives": [
+        {
+          "material": 0,
+          "triangles": 2384,
+          "vertices": 1660,
+          "indexComponentType": 5125,
+          "bounds": {
+            "min": [
+              -0.5281425714492798,
+              -0.030510280281305313,
+              -0.421874463558197
+            ],
+            "max": [
+              0.4616048336029053,
+              0.39718443155288696,
+              0.4718152582645416
+            ],
+            "size": [
+              0.9897474050521851,
+              0.4276947118341923,
+              0.8936897218227386
+            ]
+          },
+          "simplificationError": 0
+        }
+      ],
+      "occupancy": {
+        "method": "conservative triangle-cell overlap, four horizontal directions plus top; ignores texture/vertex alpha and lighting, not visual acceptance",
+        "bounds": {
+          "min": [
+            -0.5281425714492798,
+            -0.030510280281305313,
+            -0.421874463558197
+          ],
+          "max": [
+            0.4616048336029053,
+            0.39718443155288696,
+            0.4718152582645416
+          ],
+          "size": [
+            0.9897474050521851,
+            0.4276947118341923,
+            0.8936897218227386
+          ]
+        },
+        "views": [
+          {
+            "angle": 0,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 13485,
+            "fraction": 0.411529541015625,
+            "projectedAreaSquareMetres": 0.4309920350491007
+          },
+          {
+            "angle": 45,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 9768,
+            "fraction": 0.298095703125,
+            "projectedAreaSquareMetres": 0.4753935569776847
+          },
+          {
+            "angle": 90,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 15480,
+            "fraction": 0.472412109375,
+            "projectedAreaSquareMetres": 0.43794255818374794
+          },
+          {
+            "angle": 135,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 9606,
+            "fraction": 0.29315185546875,
+            "projectedAreaSquareMetres": 0.38133245092999585
+          },
+          {
+            "angle": "top",
+            "grid": [
+              128,
+              128
+            ],
+            "occupiedCells": 7015,
+            "fraction": 0.42816162109375,
+            "projectedAreaSquareMetres": 0.6773995024977281
+          }
+        ]
+      }
+    },
+    "files": [
+      {
+        "file": "assets-src/models/ridge/raw/fern_02/files.json",
+        "url": "https://api.polyhaven.com/files/fern_02",
+        "bytes": 29294,
+        "sha256": "a3e43a1dad9a175defdc5816daed6ab1192d4dcd4c8f8a5becd44e63616ba0b3",
+        "md5": {
+          "expected": null,
+          "actual": "17673f3d185a2811b6d18ab6d18c8ba7",
+          "validated": false
+        },
+        "cachedAt": "2026-10-01T05:11:54.007Z"
+      },
+      {
+        "file": "assets-src/models/ridge/raw/fern_02/info.json",
+        "url": "https://api.polyhaven.com/info/fern_02",
+        "bytes": 1065,
+        "sha256": "dc2adfc2ddceaa5accdbe73ba3ea534c87d8ab3e297d73b594a17e112dfcb45c",
+        "md5": {
+          "expected": null,
+          "actual": "41a4dac1904e8296466c913885f1ce2d",
+          "validated": false
+        },
+        "cachedAt": "2026-10-01T05:11:54.350Z"
+      },
+      {
+        "file": "assets-src/models/ridge/raw/fern_02/fern_02_1k.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/fern_02/fern_02_1k.gltf",
+        "bytes": 6899,
+        "sha256": "33974295ee19670af4877705fc7d91f33f42d6302f0d44a625e072271223031f",
+        "md5": {
+          "expected": "cf276874d37bfb73c299504a6b355b77",
+          "actual": "cf276874d37bfb73c299504a6b355b77",
+          "validated": true
+        },
+        "cachedAt": "2026-10-01T05:11:54.466Z"
+      },
+      {
+        "file": "assets-src/models/ridge/raw/fern_02/fern_02.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/fern_02/fern_02.bin",
+        "bytes": 176176,
+        "sha256": "fe1abb762bcbbc7ad9e86925c8080437a62add257d9280e9142fdc85c226e64c",
+        "md5": {
+          "expected": "c061e9255f7d36ae9ce0e92ef3e100b2",
+          "actual": "c061e9255f7d36ae9ce0e92ef3e100b2",
+          "validated": true
+        },
+        "cachedAt": "2026-10-01T05:23:44.025Z"
+      },
+      {
+        "file": "assets-src/models/ridge/raw/fern_02/textures/fern_02_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/fern_02/fern_02_nor_gl_1k.jpg",
+        "bytes": 367222,
+        "sha256": "45bce132c6e96a0864bc89ab5da51361ab3f4afa83a6669ae499ab5ca811f621",
+        "md5": {
+          "expected": "43aed63dff79554f6064627515afd9d7",
+          "actual": "43aed63dff79554f6064627515afd9d7",
+          "validated": true
+        },
+        "cachedAt": "2026-10-01T05:23:44.237Z"
+      },
+      {
+        "file": "assets-src/models/ridge/raw/fern_02/textures/fern_02_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/fern_02/fern_02_diff_1k.jpg",
+        "bytes": 315705,
+        "sha256": "a828a6e7b4c01c826911e2eac4b3afc7457dab7b3b392a31c681ed88b7d50029",
+        "md5": {
+          "expected": "82c18a6cfd5ae91c37c0e078f591181c",
+          "actual": "82c18a6cfd5ae91c37c0e078f591181c",
+          "validated": true
+        },
+        "cachedAt": "2026-10-01T05:23:44.463Z"
+      },
+      {
+        "file": "assets-src/models/ridge/raw/fern_02/textures/fern_02_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/fern_02/fern_02_arm_1k.jpg",
+        "bytes": 280359,
+        "sha256": "ebfb5d76ce9cbdaec20bcd22dce9b755f0b1b8650ef29ca13555e3e6961025d7",
+        "md5": {
+          "expected": "1bbb2b22951f450720d28e17d93a2987",
+          "actual": "1bbb2b22951f450720d28e17d93a2987",
+          "validated": true
+        },
+        "cachedAt": "2026-10-01T05:23:44.688Z"
+      },
+      {
+        "file": "assets-src/models/ridge/raw/fern_02/textures/fern_02_alpha_1k.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/fern_02/fern_02_alpha_1k.png",
+        "bytes": 114589,
+        "sha256": "ea3c64284c7ebdeedf484d2d816eae92825ec526140c3bb83859ddc7a64001f9",
+        "md5": {
+          "expected": "1421e5e36946c23a7ddcc907de89025c",
+          "actual": "1421e5e36946c23a7ddcc907de89025c",
+          "validated": true
+        },
+        "cachedAt": "2026-10-01T05:49:00.421Z"
+      }
+    ],
+    "cachedSourceBytes": 1291309
+  },
+  "units": "metres",
+  "upAxis": "+Y",
+  "processing": {
+    "tool": "tools/build-vegetation.mjs",
+    "method": "selected source node world origin in XZ, full model minimum Y; not the asymmetric crown center",
+    "builtAt": "2026-10-01T05:23:44.734Z",
+    "nodeTransforms": "source node matrices/TRS and metre scale retained unchanged; placementOffset grounds the planting anchor, not the crown",
+    "rootAnchor": [
+      0,
+      -0.030510280281305313,
+      0
+    ],
+    "sourceNodeOrigin": [
+      0,
+      0,
+      0
+    ],
+    "placementOffset": [
+      0,
+      0.030510280281305313,
+      0
+    ],
+    "boundsCenter": [
+      -0.033268868923187256,
+      0.18333707563579082,
+      0.024970397353172302
+    ],
+    "attributes": "all source vertex attributes retained in original component types and normalization; indices compacted to uint16 or uint32 as required",
+    "textures": "official normal/metallic-roughness maps copied unchanged and remain linear; foliage base color is lossless straight-alpha PNG combining decoded official diffuse RGB with publisher opacity scalars without gamma conversion, resampling or bit-depth loss; original JPEG payloads remain available",
+    "materialAlphaEvidence": [
+      {
+        "sourceMaterial": 0,
+        "name": "fern_02",
+        "sourceMode": "MASK",
+        "outputMode": "MASK",
+        "factorAlpha": 1,
+        "imageUri": "textures/fern_02_diff_1k.jpg",
+        "textureHasAlpha": false,
+        "vertexAlphaMin": 1,
+        "vertexAlphaMax": 1,
+        "testedVertices": 0,
+        "partialAlphaVertices": 0,
+        "zeroAlphaVertices": 0,
+        "exportEffectiveAlphaIsOne": true,
+        "publisherOpacity": {
+          "size": [
+            1024,
+            1024
+          ],
+          "sourceAlphaImageMode": "I;16",
+          "sourceAlphaBitDepth": 16,
+          "outputPngBitDepth": 16,
+          "outputColorType": "RGBA",
+          "sourceScalarMinimum": 0,
+          "sourceScalarMaximum": 65535,
+          "fractionBelowCutoff0_5": 0.8465232849121094,
+          "fractionZero": 0.8226919174194336,
+          "fractionOpaque": 0.13606739044189453,
+          "fractionPartial": 0.041240692138671875,
+          "rgb": "decoded official JPEG RGB preserved exactly, promoted by 257 for 16-bit PNG",
+          "alpha": "publisher scalar values preserved exactly, no threshold, gamma conversion, clamping or resampling",
+          "encoding": "lossless PNG; straight, not premultiplied alpha",
+          "mapKey": "Alpha",
+          "publisherUrl": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/fern_02/fern_02_alpha_1k.png",
+          "publisherFile": "assets-src/models/ridge/raw/fern_02/textures/fern_02_alpha_1k.png",
+          "publisherMd5": "1421e5e36946c23a7ddcc907de89025c",
+          "publisherMd5Validated": true,
+          "sourceDiffuseUri": "textures/fern_02_diff_1k.jpg",
+          "processedRgbaUri": "textures/fern_02_rgba_1k.png",
+          "sourceAlphaMode": "MASK",
+          "outputAlphaMode": "MASK",
+          "alphaCutoff": 0.5,
+          "policy": "binary cutout foliage with original soft opacity values retained in the texture; no sorted BLEND and no OPAQUE inference from a JPEG export",
+          "uvMapping": "original texture coordinates, sampler and KHR_texture_transform retained; no atlas crop, flip or rescale"
+        },
+        "change": "publisher opacity merged into RGBA; explicit foliage MASK cutoff 0.5; source JSON unchanged"
+      }
+    ],
+    "warnings": [],
+    "visualApproval": "pending lead rendered asset proof",
+    "materialRevision": "publisher-alpha-v1",
+    "materialRepairedAt": "2026-10-01T05:56:56.417Z",
+    "opacityCorrection": {
+      "retractedClaim": "JPEG plus vertex alpha 1 established author-intended opaque foliage",
+      "correction": "the glTF export omits separately published opacity; both base colors now contain verified publisher alpha and use explicit MASK 0.5",
+      "geometryUnchanged": true,
+      "geometryFiles": [
+        {
+          "file": "lod0.bin",
+          "bytes": 67424,
+          "sha256": "701cb879b31eadbf9401470359ebbdaa6ed8fbb183a7ad5facba1596ae2134f7"
+        },
+        {
+          "file": "lod1.bin",
+          "bytes": 31242,
+          "sha256": "21ad55762ac7fefb6a4357a7c162238227b226fb4761a392a0f1e57cd7936a8c"
+        },
+        {
+          "file": "lod2.bin",
+          "bytes": 12916,
+          "sha256": "d52ef66b728bdcd64c92a7cce6f6789185aa27c303f01fa6b8aed9b94a5d8e51"
+        }
+      ],
+      "visualApproval": "pending lead rerender; geometric occupancy metrics ignore alpha and cannot establish visible canopy coverage"
+    }
+  },
+  "bounds": {
+    "min": [
+      -0.5281425714492798,
+      -0.030510280281305313,
+      -0.421874463558197
+    ],
+    "max": [
+      0.4616048336029053,
+      0.39718443155288696,
+      0.4718152582645416
+    ],
+    "size": [
+      0.9897474050521851,
+      0.4276947118341923,
+      0.8936897218227386
+    ]
+  },
+  "lods": [
+    {
+      "level": 0,
+      "label": "near",
+      "url": "/assets/ridge/vegetation/fern_02/lod0.gltf",
+      "triangles": 2384,
+      "bytes": 70286,
+      "geometryBytes": 67424,
+      "targetTriangles": 2384,
+      "vertices": 1660,
+      "submeshes": 1,
+      "bounds": {
+        "min": [
+          -0.5281425714492798,
+          -0.030510280281305313,
+          -0.421874463558197
+        ],
+        "max": [
+          0.4616048336029053,
+          0.39718443155288696,
+          0.4718152582645416
+        ],
+        "size": [
+          0.9897474050521851,
+          0.4276947118341923,
+          0.8936897218227386
+        ]
+      },
+      "primitives": [
+        {
+          "material": 0,
+          "triangles": 2384,
+          "vertices": 1660,
+          "indexComponentType": 5123,
+          "bounds": {
+            "min": [
+              -0.5281425714492798,
+              -0.030510280281305313,
+              -0.421874463558197
+            ],
+            "max": [
+              0.4616048336029053,
+              0.39718443155288696,
+              0.4718152582645416
+            ],
+            "size": [
+              0.9897474050521851,
+              0.4276947118341923,
+              0.8936897218227386
+            ]
+          },
+          "simplificationError": 0
+        }
+      ],
+      "occupancy": {
+        "method": "conservative triangle-cell overlap, four horizontal directions plus top; ignores texture/vertex alpha and lighting, not visual acceptance",
+        "bounds": {
+          "min": [
+            -0.5281425714492798,
+            -0.030510280281305313,
+            -0.421874463558197
+          ],
+          "max": [
+            0.4616048336029053,
+            0.39718443155288696,
+            0.4718152582645416
+          ],
+          "size": [
+            0.9897474050521851,
+            0.4276947118341923,
+            0.8936897218227386
+          ]
+        },
+        "views": [
+          {
+            "angle": 0,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 13485,
+            "fraction": 0.411529541015625,
+            "projectedAreaSquareMetres": 0.4309920350491007,
+            "sourceCellsRetained": 1,
+            "projectedAreaRatio": 1
+          },
+          {
+            "angle": 45,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 9768,
+            "fraction": 0.298095703125,
+            "projectedAreaSquareMetres": 0.4753935569776847,
+            "sourceCellsRetained": 1,
+            "projectedAreaRatio": 1
+          },
+          {
+            "angle": 90,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 15480,
+            "fraction": 0.472412109375,
+            "projectedAreaSquareMetres": 0.43794255818374794,
+            "sourceCellsRetained": 1,
+            "projectedAreaRatio": 1
+          },
+          {
+            "angle": 135,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 9606,
+            "fraction": 0.29315185546875,
+            "projectedAreaSquareMetres": 0.38133245092999585,
+            "sourceCellsRetained": 1,
+            "projectedAreaRatio": 1
+          },
+          {
+            "angle": "top",
+            "grid": [
+              128,
+              128
+            ],
+            "occupiedCells": 7015,
+            "fraction": 0.42816162109375,
+            "projectedAreaSquareMetres": 0.6773995024977281,
+            "sourceCellsRetained": 1,
+            "projectedAreaRatio": 1
+          }
+        ]
+      }
+    },
+    {
+      "level": 1,
+      "label": "mid",
+      "url": "/assets/ridge/vegetation/fern_02/lod1.gltf",
+      "triangles": 999,
+      "bytes": 34096,
+      "geometryBytes": 31242,
+      "targetTriangles": 1000,
+      "vertices": 789,
+      "submeshes": 1,
+      "bounds": {
+        "min": [
+          -0.5281425714492798,
+          -0.030510280281305313,
+          -0.421874463558197
+        ],
+        "max": [
+          0.4608733057975769,
+          0.39718443155288696,
+          0.4718152582645416
+        ],
+        "size": [
+          0.9890158772468567,
+          0.4276947118341923,
+          0.8936897218227386
+        ]
+      },
+      "primitives": [
+        {
+          "material": 0,
+          "triangles": 999,
+          "vertices": 789,
+          "indexComponentType": 5123,
+          "bounds": {
+            "min": [
+              -0.5281425714492798,
+              -0.030510280281305313,
+              -0.421874463558197
+            ],
+            "max": [
+              0.4608733057975769,
+              0.39718443155288696,
+              0.4718152582645416
+            ],
+            "size": [
+              0.9890158772468567,
+              0.4276947118341923,
+              0.8936897218227386
+            ]
+          },
+          "simplificationError": 0.008483264595270157
+        }
+      ],
+      "occupancy": {
+        "method": "conservative triangle-cell overlap, four horizontal directions plus top; ignores texture/vertex alpha and lighting, not visual acceptance",
+        "bounds": {
+          "min": [
+            -0.5281425714492798,
+            -0.030510280281305313,
+            -0.421874463558197
+          ],
+          "max": [
+            0.4616048336029053,
+            0.39718443155288696,
+            0.4718152582645416
+          ],
+          "size": [
+            0.9897474050521851,
+            0.4276947118341923,
+            0.8936897218227386
+          ]
+        },
+        "views": [
+          {
+            "angle": 0,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 13429,
+            "fraction": 0.409820556640625,
+            "projectedAreaSquareMetres": 0.43584509973258906,
+            "sourceCellsRetained": 0.9869484612532443,
+            "projectedAreaRatio": 1.0112602189572608
+          },
+          {
+            "angle": 45,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 9724,
+            "fraction": 0.2967529296875,
+            "projectedAreaSquareMetres": 0.4797605401715051,
+            "sourceCellsRetained": 0.9903767403767404,
+            "projectedAreaRatio": 1.009186037820082
+          },
+          {
+            "angle": 90,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 15506,
+            "fraction": 0.47320556640625,
+            "projectedAreaSquareMetres": 0.4452315824338079,
+            "sourceCellsRetained": 0.9907622739018088,
+            "projectedAreaRatio": 1.0166437906384098
+          },
+          {
+            "angle": 135,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 9575,
+            "fraction": 0.292205810546875,
+            "projectedAreaSquareMetres": 0.39013333426738256,
+            "sourceCellsRetained": 0.9874037060170726,
+            "projectedAreaRatio": 1.023079292926482
+          },
+          {
+            "angle": "top",
+            "grid": [
+              128,
+              128
+            ],
+            "occupiedCells": 7014,
+            "fraction": 0.4281005859375,
+            "projectedAreaSquareMetres": 0.6792230006527563,
+            "sourceCellsRetained": 0.9933000712758375,
+            "projectedAreaRatio": 1.0026919094984637
+          }
+        ]
+      }
+    },
+    {
+      "level": 2,
+      "label": "far",
+      "url": "/assets/ridge/vegetation/fern_02/lod2.gltf",
+      "triangles": 350,
+      "bytes": 15769,
+      "geometryBytes": 12916,
+      "targetTriangles": 350,
+      "vertices": 338,
+      "submeshes": 1,
+      "bounds": {
+        "min": [
+          -0.5281425714492798,
+          -0.030510280281305313,
+          -0.41520196199417114
+        ],
+        "max": [
+          0.4608733057975769,
+          0.3941141366958618,
+          0.457791268825531
+        ],
+        "size": [
+          0.9890158772468567,
+          0.42462441697716713,
+          0.8729932308197021
+        ]
+      },
+      "primitives": [
+        {
+          "material": 0,
+          "triangles": 350,
+          "vertices": 338,
+          "indexComponentType": 5123,
+          "bounds": {
+            "min": [
+              -0.5281425714492798,
+              -0.030510280281305313,
+              -0.41520196199417114
+            ],
+            "max": [
+              0.4608733057975769,
+              0.3941141366958618,
+              0.457791268825531
+            ],
+            "size": [
+              0.9890158772468567,
+              0.42462441697716713,
+              0.8729932308197021
+            ]
+          },
+          "simplificationError": 0.018732663244009018
+        }
+      ],
+      "occupancy": {
+        "method": "conservative triangle-cell overlap, four horizontal directions plus top; ignores texture/vertex alpha and lighting, not visual acceptance",
+        "bounds": {
+          "min": [
+            -0.5281425714492798,
+            -0.030510280281305313,
+            -0.421874463558197
+          ],
+          "max": [
+            0.4616048336029053,
+            0.39718443155288696,
+            0.4718152582645416
+          ],
+          "size": [
+            0.9897474050521851,
+            0.4276947118341923,
+            0.8936897218227386
+          ]
+        },
+        "views": [
+          {
+            "angle": 0,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 13003,
+            "fraction": 0.396820068359375,
+            "projectedAreaSquareMetres": 0.38404714711102345,
+            "sourceCellsRetained": 0.9417130144605117,
+            "projectedAreaRatio": 0.8910771334028735
+          },
+          {
+            "angle": 45,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 9541,
+            "fraction": 0.291168212890625,
+            "projectedAreaSquareMetres": 0.4452220141713982,
+            "sourceCellsRetained": 0.9580262080262081,
+            "projectedAreaRatio": 0.9365335470718152
+          },
+          {
+            "angle": 90,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 15261,
+            "fraction": 0.465728759765625,
+            "projectedAreaSquareMetres": 0.41418454220432527,
+            "sourceCellsRetained": 0.9553617571059432,
+            "projectedAreaRatio": 0.9457508398408393
+          },
+          {
+            "angle": 135,
+            "grid": [
+              128,
+              256
+            ],
+            "occupiedCells": 9497,
+            "fraction": 0.289825439453125,
+            "projectedAreaSquareMetres": 0.3629106177184579,
+            "sourceCellsRetained": 0.9452425567353737,
+            "projectedAreaRatio": 0.9516908850358508
+          },
+          {
+            "angle": "top",
+            "grid": [
+              128,
+              128
+            ],
+            "occupiedCells": 6893,
+            "fraction": 0.42071533203125,
+            "projectedAreaSquareMetres": 0.6612138166871544,
+            "sourceCellsRetained": 0.9666429080541696,
+            "projectedAreaRatio": 0.9761061445263934
+          }
+        ]
+      }
+    }
+  ],
+  "geometryBytes": 111582,
+  "textureBytes": 2397272,
+  "processedFiles": [
+    {
+      "file": "textures/fern_02_nor_gl_1k.jpg",
+      "url": "/assets/ridge/vegetation/fern_02/textures/fern_02_nor_gl_1k.jpg",
+      "bytes": 367222,
+      "sha256": "45bce132c6e96a0864bc89ab5da51361ab3f4afa83a6669ae499ab5ca811f621"
+    },
+    {
+      "file": "textures/fern_02_diff_1k.jpg",
+      "url": "/assets/ridge/vegetation/fern_02/textures/fern_02_diff_1k.jpg",
+      "bytes": 315705,
+      "sha256": "a828a6e7b4c01c826911e2eac4b3afc7457dab7b3b392a31c681ed88b7d50029"
+    },
+    {
+      "file": "textures/fern_02_arm_1k.jpg",
+      "url": "/assets/ridge/vegetation/fern_02/textures/fern_02_arm_1k.jpg",
+      "bytes": 280359,
+      "sha256": "ebfb5d76ce9cbdaec20bcd22dce9b755f0b1b8650ef29ca13555e3e6961025d7"
+    },
+    {
+      "file": "lod0.gltf",
+      "url": "/assets/ridge/vegetation/fern_02/lod0.gltf",
+      "bytes": 2862,
+      "sha256": "f832e486ace5a73c650665293fbc2f31216e5f98b3492e8df1b9db70224791f2"
+    },
+    {
+      "file": "lod0.bin",
+      "url": "/assets/ridge/vegetation/fern_02/lod0.bin",
+      "bytes": 67424,
+      "sha256": "701cb879b31eadbf9401470359ebbdaa6ed8fbb183a7ad5facba1596ae2134f7"
+    },
+    {
+      "file": "lod1.gltf",
+      "url": "/assets/ridge/vegetation/fern_02/lod1.gltf",
+      "bytes": 2854,
+      "sha256": "9b5e1a0735e6088060810af4fc9d804964d580fc2d5eadffbdb30f28a5744943"
+    },
+    {
+      "file": "lod1.bin",
+      "url": "/assets/ridge/vegetation/fern_02/lod1.bin",
+      "bytes": 31242,
+      "sha256": "21ad55762ac7fefb6a4357a7c162238227b226fb4761a392a0f1e57cd7936a8c"
+    },
+    {
+      "file": "lod2.gltf",
+      "url": "/assets/ridge/vegetation/fern_02/lod2.gltf",
+      "bytes": 2853,
+      "sha256": "f98a70e52fc37ec31b2662011721c02d166538cdb930164630e2a70cfea52313"
+    },
+    {
+      "file": "lod2.bin",
+      "url": "/assets/ridge/vegetation/fern_02/lod2.bin",
+      "bytes": 12916,
+      "sha256": "d52ef66b728bdcd64c92a7cce6f6789185aa27c303f01fa6b8aed9b94a5d8e51"
+    },
+    {
+      "file": "textures/fern_02_rgba_1k.png",
+      "url": "/assets/ridge/vegetation/fern_02/textures/fern_02_rgba_1k.png",
+      "bytes": 1433986,
+      "sha256": "2d61cdbcc70e90495703607e8e1b8a1025824eeecf49b970a2b94e7565555cd6"
+    }
+  ],
+  "processedBytes": 2517423,
+  "byteAccounting": "processedFiles hashes/bytes cover payloads; provenance and manifest JSON are accounted separately without recursive self-hashes",
+  "referencedTextureBytes": 2081567
+}
