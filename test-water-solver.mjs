@@ -2,7 +2,7 @@ import './tests/wave-field.test.mjs';
 import './tests/stones.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { createWater,sampleAmbientWaves } from './src/water.js';
+import { createWater,sampleAmbientWaves,sampleStirDetail } from './src/water.js';
 
 const draws=[];let target=null,color=new THREE.Color('#18242c'),alpha=.8;
 const renderer={xr:{enabled:false},shadowMap:{autoUpdate:true},clippingPlanes:[],autoClear:false,toneMapping:THREE.ACESFilmicToneMapping,
@@ -31,12 +31,18 @@ water.disturb(0,0,1);water.update(1/60,1.02);
 assert(water.waveField.stats().energy>0);assert(Math.abs(water.waveField.stats().mass)<1e-7);
 water.reset();water.setFlow(.65);water.update(0,2.3);
 assert(Math.abs(water.heightAt(1.3,-.7)-sampleAmbientWaves(1.3,-.7,2.3).height)<1e-12,'CPU float height matches deep rendered ambient');
+water.setSettings({wind:0,stirChoppiness:1});water.stirSegment(0,0,.4,0,.85,.05);water.update(1/60,2.35);
+const movingHeight=water.waveField.heightAt(.25,0)+sampleStirDetail(.25,0,2.35).height*water.waveField.activityAt(.25,0);
+assert(Math.abs(water.heightAt(.25,0)-movingHeight)<1e-12,'Interaction detail follows the same moving surface as floating objects');
+water.setSettings({wind:0,stirChoppiness:0});
+assert(Math.abs(water.heightAt(.25,0)-water.waveField.heightAt(.25,0))<1e-12,'Smooth setting removes short-wave detail immediately');
+water.reset();
 water.setTerrain((x)=>x/4-.5);water.setFlow(0);water.disturb(3,0,1);water.update(1/60,2.4);
 assert.equal(water.waveField.stats().energy,0,'Dry land rejects impulses');assert.equal(water.heightAt(3,0),0);
-for(const[x,z,t]of[[1.7,-.8,2.2],[-4.1,2.9,6.2]]){
- const h=sampleAmbientWaves(x,z,t),e=1e-5;
- const dx=(sampleAmbientWaves(x+e,z,t).height-sampleAmbientWaves(x-e,z,t).height)/(2*e);
- const dz=(sampleAmbientWaves(x,z+e,t).height-sampleAmbientWaves(x,z-e,t).height)/(2*e);
+for(const sample of [sampleAmbientWaves,sampleStirDetail])for(const[x,z,t]of[[1.7,-.8,2.2],[-4.1,2.9,6.2]]){
+ const h=sample(x,z,t),e=1e-5;
+ const dx=(sample(x+e,z,t).height-sample(x-e,z,t).height)/(2*e);
+ const dz=(sample(x,z+e,t).height-sample(x,z-e,t).height)/(2*e);
  assert(Math.abs(dx-h.slopeX)<1e-7&&Math.abs(dz-h.slopeZ)<1e-7);
 }
 assert.equal(water.mesh.receiveShadow,true);assert.equal(water.mesh.material.lights,true);
