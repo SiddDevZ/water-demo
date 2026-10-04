@@ -138,39 +138,3 @@ for(let i=0;i<240;i++){maximumStone.update(1/120);maximumPeak=Math.max(maximumPe
 assert.ok(maximumPeak<.15,`Maximum tool and slider remain below15cm: ${maximumPeak}`);
 close(maximumStone.stats().mass,0,1e-6,'Maximum power still conserves water');
 console.log('Upper power slider response:',{at11:power11.stats().maxAbsHeight,at15:power15.stats().maxAbsHeight,maximumPeak});
-
-const cutting=createWaveField({nx:320,nz:256});cutting.stirSegment(-.1,0,0,0,.85,1/60);
-assert.ok(cutting.heightAt(.3,0)>cutting.heightAt(-.3,0),'Cutting immersion carries its rim ahead of travel');
-const reversed=createWaveField({nx:320,nz:256});reversed.stirSegment(.1,0,0,0,.85,1/60);
-assert.ok(reversed.heightAt(-.3,0)>reversed.heightAt(.3,0),'Bow rim follows reversed direction');
-const initialCut=cutting.heights.slice();for(let i=0;i<120;i++)cutting.stirSegment(0,0,0,0,.85,1/60);
-assert.ok(rmsDifference(initialCut,cutting.heights)<1e-7,'Stationary maintenance cannot add displacement repeatedly');
-function chopStroke(chop){const f=createWaveField({terrain:bankHeight});f.setSettings({stirChoppiness:chop});for(let i=0;i<90;i++){f.stirSegment(-3+6*i/90,2,-3+6*(i+1)/90,2,.85,1/60);f.update(1/60);}return f;}
-const smoothCut=chopStroke(0),roughCut=chopStroke(1.5);
-assert.ok(rmsDifference(smoothCut.heights,roughCut.heights)>.0002,'Choppiness changes actual propagated wake');
-assert.ok(roughCut.stats().maxAbsHeight<.10,'Sharpened wake avoids inflated displacement');
-close(roughCut.stats().mass,0,1e-6,'Shedding and directional immersion conserve volume');
-console.log('Directional cutting and choppiness:',{smooth:smoothCut.stats().maxAbsHeight,choppy:roughCut.stats().maxAbsHeight,rms:rmsDifference(smoothCut.heights,roughCut.heights)});
-
-const lip=createWaveField({nx:320,nz:256});lip.stirSegment(-.067,0,0,0,.85,1/60);
-assert.ok(lip.heightAt(.25,0)>.015&&lip.heightAt(.25,0)<.027,'Moving tool has a visible narrow1.5–2.6cm forward lip');
-assert.ok(lip.heightAt(0,0)<-.02&&lip.heightAt(0,0)>-.035,'Cutting trough remains2–3.5cm');
-close(lip.stats().mass,0,1e-7,'Directional lip and side shoulders balance the trough volume');
-const shoreLip=createWaveField({nx:320,nz:256,terrain:(x)=>x<.3?-.06:.2});shoreLip.stirSegment(-.1,0,.15,0,1.5,1/60);assert.ok(shoreLip.stats().maxAbsHeight<=.02101,'Shallow lip obeys depth-relative immersion guard');close(shoreLip.stats().mass,0,1e-7,'Shore-truncated lip remains balanced');
-console.log('Directional leading lip:',{forward:lip.heightAt(.25,0),trough:lip.heightAt(0,0)});
-
-function heldSamples(f){const before=[f.heightAt(.25,0),f.heightAt(-.25,0)];f.endStir();return before.map((h,i)=>h-f.heightAt(i?-.25:.25,0));}
-const pausedTool=createWaveField({nx:320,nz:256});pausedTool.stirSegment(-.067,0,0,0,.85,1/60);
-for(let i=0;i<15;i++){pausedTool.update(1/60);pausedTool.stirSegment(0,0,0,0,.85,1/60);}
-const stoppedShape=heldSamples(pausedTool);close(stoppedShape[0],stoppedShape[1],1e-6,'Stopped tool relaxes to radial despite zero-length hold refresh');
-const liveTexture=createWaveField({nx:320,nz:256});liveTexture.stirSegment(-.067,0,0,0,.85,1/60);liveTexture.setSettings({stirChoppiness:0});liveTexture.stirSegment(0,0,0,0,.85,1/60);
-const liveShape=heldSamples(liveTexture);close(liveShape[0],liveShape[1],1e-6,'Live choppiness zero applies to held tool without movement');
-console.log('Held bow relaxes over .2s and responds to live texture settings without new movement.');
-
-const activity=createWaveField({terrain:(x)=>x>3?.1:-1});assert.equal(activity.activityAt(0,0),0,'Quiet activity is zero');
-activity.stirSegment(-2,0,2,0,.85,1);activity.update(1/120);
-let activeMax=0;for(let i=3;i<activity.texturePixelsRGBA.length;i+=4){const a=activity.texturePixelsRGBA[i];assert.ok(a>=0&&a<=1);activeMax=Math.max(activeMax,a);}
-assert.ok(activeMax>.5,'Stirring activates local motion detail');assert.equal(activity.activityAt(4,0),0,'Dry cells cannot activate detail');
-const sampleIndex=77*192+90;close(activity.activityAt((90+.5)*20/192-10,(77+.5)*16/154-8),activity.texturePixelsRGBA[sampleIndex*4+3],1e-6,'CPU activity matches alpha at cell center');
-activity.reset();assert.equal(activity.activityAt(0,0),0,'Reset clears motion detail');
-console.log('Motion activity alpha: quiet/dry zero, bounded moving response, matching CPU sampler.');
