@@ -13,6 +13,10 @@ npm run dev
 
 Open http://localhost:5190. Build with `npm run build`.
 
+## Deploy to Vercel
+
+Import this repository with the repository root as the project root. `vercel.json` configures a clean dependency install including Vite, the production build, and the `dist` output directory. The project uses Node.js 22. Dependencies install from npm; no sibling workspace is required.
+
 ## Play
 
 - **1 — Stir:** drag to push a continuous wake through the water.
