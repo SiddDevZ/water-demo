@@ -1,4 +1,6 @@
-# Komorebi — A blue koi pond
+# water-demo
+
+Komorebi — A blue koi pond.
 
 An overhead Three.js water study inspired by the supplied blue koi-pond reference: deep blue water, pale turquoise shelves, warm sand, mossy stones, lime-green banks and two corner cherry canopies. A minimal six-slot pixel HUD keeps the pond central. Local Saltwind Island supplied early optical inspiration; the current interaction solver and caustic system are new implementations.
 
@@ -23,11 +25,11 @@ Open http://localhost:5190. Build with `npm run build`.
 - **Touch:** tap a slot, then tap or drag the pond to interact. Use two fingers to orbit and zoom; desktop keyboard shortcuts are optional.
 - **H:** hide or restore the interface.
 
-The upper-right gear contains flow, interaction strength, daylight, ambience, reset, fullscreen and recording controls. Recording captures the canvas without the interface or audio, requesting up to 60 fps. Stop to download, or let the 30-second limit finish. Chromium normally produces WebM; actual capture rate depends on hardware.
+The upper-right gear contains 22 live settings for water motion, optics, sunlight, stone throws, and how boats, koi, leaves and petals respond. Choose Natural, Glass, Cinematic or Playful presets; changes save locally. Settings reset and scene reset are separate. The panel also includes ambience, fullscreen and recording controls. Recording captures the canvas without the interface or audio, requesting up to 60 fps. Stop to download, or let the 30-second limit finish. Chromium normally produces WebM; actual capture rate depends on hardware.
 
 ## Surface simulation
 
-Stones, dragging and rain act on one shared 192 × 154 conservative surface field. Height lives at cell centers and velocities at cell faces. Shared face fluxes preserve displaced water volume; each impact starts a balanced depression and surrounding displacement, followed by a short damped cavity rebound. The resulting crests travel through the field; the localized source expires after 1.2 seconds. There are no scheduled expanding impact rings. Pointer strokes deposit directional momentum along their path instead of stamping circles per mouse event.
+Stones, dragging and rain act on one shared 320 × 256 conservative surface field. Height lives at cell centers and velocities at cell faces. Shared face fluxes preserve displaced water volume; each impact starts a balanced depression and surrounding displacement, followed by a short damped cavity rebound. The resulting crests travel through the field; the localized source expires after 0.85 seconds. There are no scheduled expanding impact rings. Pointer strokes deposit directional momentum along their path instead of stamping circles per mouse event.
 
 The solver uses a fixed 120 Hz clock with CFL-controlled subdivisions. A narrowband finite-depth approximation uses effective depth `tanh(kD) / k`, with `k = 2π / 1.8 m`, to limit deep-water wave speed. This models one interaction wavelength band; it is **not full spectral dispersion**. Damping reduces energy over time. Dry cells and approximate circular rock masks impose impermeable boundaries, while depth controls propagation speed.
 
