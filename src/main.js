@@ -12,6 +12,7 @@ import { enhanceCloudSky } from './cloud-sky.js';
 import { createPetals } from './petals.js';
 import { setupUI } from './ui.js';
 import { createPostFX } from './postfx.js';
+import {loadSettings,normalizeSettings} from './settings.js';
 import './style.css';
 const canvas=document.querySelector('#scene');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
@@ -24,7 +25,7 @@ const controls=new OrbitControls(camera,canvas);controls.target.set(0,0,2.1);con
 scene.add(new THREE.HemisphereLight('#eefcff','#bdcc74',1.05));
 // Side light shapes the stone and sends the canopy's dappled shadows across the bank.
 // Soft sky illumination preserves colour inside those shadows without flattening them.
-const sun=new THREE.DirectionalLight('#fff1d4',3.2);sun.position.set(3.8,23,-16);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);Object.assign(sun.shadow.camera,{left:-15,right:15,top:19,bottom:-15,near:1,far:100});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.00012;sun.shadow.normalBias=.008;scene.add(sun);const fill=new THREE.DirectionalLight('#d0edff',.22);fill.position.set(5,7,12);scene.add(fill);
+const sun=new THREE.DirectionalLight('#fff1d4',3.4);sun.position.set(2.605,29.544,-4.512);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);Object.assign(sun.shadow.camera,{left:-15,right:15,top:19,bottom:-15,near:1,far:100});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.00012;sun.shadow.normalBias=.008;scene.add(sun);const fill=new THREE.DirectionalLight('#d0edff',.22);fill.position.set(5,7,12);scene.add(fill);
 // Clear daylight gives the spring a blue sky reflection and fresh, neutral fill.
 const sky=new Sky();sky.scale.setScalar(250);scene.add(sky);
 const skyUniforms=sky.material.uniforms;
@@ -46,10 +47,11 @@ const life=createLife(scene,water,environment.bankHeight);const paperBoats=creat
 paperBoats.add(5.82,.23);
 paperBoats.boats[0].yaw=-.6;
 const petals=createPetals(scene,water,environment.bankHeight);
+let appSettings=loadSettings();
 let tool='stir',strength=.85,flow=.65,raining=false,time=0,down=false,strokePoint=null,audioCtx,audioGain,soundOn=false,cinematic=false;
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2(),plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),hit=new THREE.Vector3();
 const debris=[],drops=[];
-const stoneThrows=createStones(scene,water,environment.bankHeight,{onImpact:(x,z,power)=>{life.spook(x,z,power);playSplash(power);renderer.shadowMap.needsUpdate=true;}});
+const stoneThrows=createStones(scene,water,environment.bankHeight,{onImpact:(x,z,power)=>{life.spook(x,z,power*appSettings.stonePower);playSplash(power*appSettings.stonePower);renderer.shadowMap.needsUpdate=true;}});
 const stones=stoneThrows.stones;
 const leafCanvas=document.createElement('canvas');leafCanvas.width=leafCanvas.height=256;const lc=leafCanvas.getContext('2d');
 const grad=lc.createLinearGradient(0,0,256,256);grad.addColorStop(0,'#89b932');grad.addColorStop(.5,'#cbdd5c');grad.addColorStop(1,'#669826');lc.fillStyle=grad;lc.fillRect(0,0,256,256);
@@ -72,12 +74,29 @@ let nextBird=0;
 function birdsong(){if(!audioCtx||!soundOn)return;const start=audioCtx.currentTime;for(let i=0;i<3;i++){const oscillator=audioCtx.createOscillator(),gain=audioCtx.createGain(),t=start+i*.16;oscillator.type='sine';oscillator.frequency.setValueAtTime(2100+i*270,t);oscillator.frequency.exponentialRampToValueAtTime(3400+i*100,t+.045);oscillator.frequency.exponentialRampToValueAtTime(2400+i*220,t+.13);gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.04,t+.025);gain.gain.exponentialRampToValueAtTime(.0001,t+.15);oscillator.connect(gain).connect(audioGain);oscillator.start(t);oscillator.stop(t+.16);}}
 let recorder,recordChunks=[],recordTimer;
 function recordClip(){if(recorder?.state==='recording'){recorder.stop();return;}if(!canvas.captureStream||!window.MediaRecorder){ui.toast('Recording is unavailable in this browser');return;}const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/mp4'].find(t=>MediaRecorder.isTypeSupported(t));recorder=new MediaRecorder(canvas.captureStream(60),{...(mime?{mimeType:mime}:{}),videoBitsPerSecond:14000000});recordChunks=[];recorder.ondataavailable=e=>{if(e.data.size)recordChunks.push(e.data);};recorder.onstop=()=>{clearTimeout(recordTimer);ui.setRecording?.(false);const blob=new Blob(recordChunks,{type:recorder.mimeType});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='komorebi-water-'+Date.now()+(recorder.mimeType.includes('mp4')?'.mp4':'.webm');a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);recorder.stream.getTracks().forEach(t=>t.stop());ui.toast('Your clip is ready — saved to downloads');};recorder.start();ui.setRecording?.(true);ui.toast('Recording the scene · Click again to save · 30s maximum');recordTimer=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},30000);}
-function setTool(value){strokePoint=null;tool=value;raining=value==='rain';rainLines.visible=raining;ui.setTool(value);}
+function setTool(value){water.endStir();strokePoint=null;tool=value;raining=value==='rain';rainLines.visible=raining;ui.setTool(value);}
 function hideUI(){cinematic=!cinematic;document.querySelector('#ui').style.opacity=cinematic?'0':'1';document.querySelector('#ui').style.pointerEvents=cinematic?'none':'';}
-const ui=setupUI({onTool:setTool,onFlow:v=>{flow=Number(v);water.setFlow(flow);},onStrength:v=>strength=Number(v),onLight:v=>{sun.intensity=1.7+Number(v)*2.0;renderer.shadowMap.needsUpdate=true;renderer.toneMappingExposure=.93+Number(v)*.20;},onReset:()=>{for(const o of [...debris,...drops])scene.remove(o.mesh);debris.length=drops.length=0;stoneThrows.reset();camera.position.set(0,15.2,9.5);controls.target.set(0,0,2.1);raining=false;setTool('stir');water.reset?.();life.reset();paperBoats.reset();ui.toast('A fresh moment of stillness');},onSound:toggleSound,onFullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.();},onCinematic:hideUI,onRecord:recordClip});
-function getHit(e){const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);raycaster.ray.intersectPlane(plane,hit);return Math.abs(hit.x)<9.7&&Math.abs(hit.z)<7.7&&environment.bankHeight(hit.x,hit.z)<-.06;}
+function applySettings(value){
+  appSettings=normalizeSettings(value);strength=appSettings.stirStrength;flow=appSettings.wind;
+  water.setSettings(appSettings);stoneThrows.setSettings(appSettings);paperBoats.setSettings(appSettings);life.setSettings(appSettings);petals.setSettings(appSettings);
+  const elevation=THREE.MathUtils.degToRad(appSettings.sunElevation),azimuth=THREE.MathUtils.degToRad(appSettings.sunAzimuth);
+  sun.intensity=appSettings.sunIntensity;sun.position.set(Math.cos(azimuth)*Math.cos(elevation),Math.sin(elevation),Math.sin(azimuth)*Math.cos(elevation)).multiplyScalar(30);
+  skyUniforms.sunPosition.value.copy(sun.position).normalize();clouds.setSun(sun.position);water.setSun(sun.position,sun.color,sun.intensity);
+  renderer.toneMappingExposure=appSettings.exposure;renderer.shadowMap.needsUpdate=true;
+}
+const ui=setupUI({initialSettings:appSettings,onSettings:applySettings, onTool:setTool,onReset:()=>{for(const o of [...debris,...drops])scene.remove(o.mesh);debris.length=drops.length=0;stoneThrows.reset();camera.position.set(0,15.2,9.5);controls.target.set(0,0,2.1);raining=false;setTool('stir');water.reset?.();life.reset();paperBoats.reset();ui.toast('A fresh moment of stillness');},onSound:toggleSound,onFullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.();},onCinematic:hideUI,onRecord:recordClip});
+function getHit(e){
+  const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);
+  if(!raycaster.ray.intersectPlane(plane,hit))return false;
+  // Solve against the displaced surface, not the flat floor or a screen offset.
+  if(Math.abs(raycaster.ray.direction.y)>.02)for(let i=0;i<4;i++){
+    const h=water.heightAt(hit.x,hit.z),t=(h-raycaster.ray.origin.y)/raycaster.ray.direction.y;
+    if(t<0)return false;raycaster.ray.at(t,hit);
+  }
+  return Math.abs(hit.x)<9.7&&Math.abs(hit.z)<7.7&&environment.bankHeight(hit.x,hit.z)<-.06;
+}
 function interact(e,first=false){
-  if(!getHit(e)){strokePoint=null;return;}
+  if(!getHit(e)){water.endStir();strokePoint=null;return;}
   if(tool==='stir'){
     const t=e.timeStamp*.001;
     if(first||!strokePoint){strokePoint={x:hit.x,z:hit.z,t};return;}
@@ -87,7 +106,7 @@ function interact(e,first=false){
       strokePoint={x:hit.x,z:hit.z,t};
     }
   }else if(first&&tool==='stone'){
-    stoneThrows.throwAt(hit.x,hit.z,strength,camera);
+    stoneThrows.throwAt(hit.x,hit.z,.85,camera);
   }else if(first&&tool==='leaf'){leaf(hit.x,hit.z);water.disturb(hit.x,hit.z,.10);}
   else if(first&&tool==='feed'){life.feed(hit.x,hit.z);}
   else if(first&&tool==='boat'){paperBoats.add(hit.x,hit.z);}
@@ -95,17 +114,17 @@ function interact(e,first=false){
 }
 canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;down=true;strokePoint=null;canvas.setPointerCapture(e.pointerId);interact(e,true);});
 canvas.addEventListener('pointermove',e=>{pointerMark.visible=getHit(e);pointerMark.position.set(hit.x,.05,hit.z);if(down)interact(e);});
-canvas.addEventListener('pointerleave',()=>{pointerMark.visible=false;strokePoint=null;});
-canvas.addEventListener('pointerup',()=>{down=false;strokePoint=null;});
-canvas.addEventListener('pointercancel',()=>{down=false;strokePoint=null;});
+canvas.addEventListener('pointerleave',()=>{pointerMark.visible=false;water.endStir();strokePoint=null;});
+canvas.addEventListener('pointerup',()=>{down=false;water.endStir();strokePoint=null;});
+canvas.addEventListener('pointercancel',()=>{down=false;water.endStir();strokePoint=null;});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);postFX.resize(innerWidth,innerHeight);});
 let last=performance.now(),frames=0,fpsTime=0,fpsLast=performance.now(),lastShadowTime=-Infinity;
-function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.04);last=now;time+=dt;if(soundOn&&time>nextBird){birdsong();nextBird=time+8+Math.random()*9;}controls.update();clouds.update(dt,time);if(time-lastShadowTime>((down||stones.some(s=>!s.impacted)||life.getState().startled>0||paperBoats.boats.some(b=>Math.hypot(b.vx,b.vz)>.15))?1/30:1/15)){renderer.shadowMap.needsUpdate=true;lastShadowTime=time;}environment.update?.(dt,time);vegetation.update(dt,time);petals.update(dt,time);life.update(dt,time);paperBoats.update(dt,time,flow);if(pointerMark.visible)pointerMark.position.y=.045+water.heightAt(pointerMark.position.x,pointerMark.position.z);if(raining){for(let i=0;i<rainSeeds.length;i++){const p=rainSeeds[i];p.y-=dt*p.speed;p.x+=dt*.24;if(p.y<0){if(environment.bankHeight(p.x,p.z)<-.05)water.disturb(p.x,p.z,.055+.065*strength);p.y=8+Math.random()*5;p.x=(Math.random()-.5)*19;p.z=(Math.random()-.5)*15;}rainPositions.set([p.x,p.y,p.z,p.x-.007,p.y+.22,p.z],i*6);}rainGeometry.attributes.position.needsUpdate=true;}
+function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.04);last=now;time+=dt;if(soundOn&&time>nextBird){birdsong();nextBird=time+8+Math.random()*9;}controls.update();if(down&&tool==='stir'&&strokePoint)water.stirSegment(strokePoint.x,strokePoint.z,strokePoint.x,strokePoint.z,strength,dt);clouds.update(dt,time);if(time-lastShadowTime>((down||stones.some(s=>!s.impacted)||life.getState().startled>0||paperBoats.boats.some(b=>Math.hypot(b.vx,b.vz)>.15))?1/30:1/15)){renderer.shadowMap.needsUpdate=true;lastShadowTime=time;}environment.update?.(dt,time);vegetation.update(dt,time);petals.update(dt,time);life.update(dt,time);paperBoats.update(dt,time,flow);if(pointerMark.visible)pointerMark.position.y=.045+water.heightAt(pointerMark.position.x,pointerMark.position.z);if(raining){for(let i=0;i<rainSeeds.length;i++){const p=rainSeeds[i];p.y-=dt*p.speed;p.x+=dt*.24;if(p.y<0){if(environment.bankHeight(p.x,p.z)<-.05)water.disturb(p.x,p.z,.055+.065*strength);p.y=8+Math.random()*5;p.x=(Math.random()-.5)*19;p.z=(Math.random()-.5)*15;}rainPositions.set([p.x,p.y,p.z,p.x-.007,p.y+.22,p.z],i*6);}rainGeometry.attributes.position.needsUpdate=true;}
 for(const o of debris){
   const p=o.mesh.position,motion=water.motionAt(p.x,p.z);
-  o.vx=THREE.MathUtils.damp(o.vx||0,motion.vx+Math.sin(time*.3+o.seed)*.025,5,dt);
-  o.vz=THREE.MathUtils.damp(o.vz||0,motion.vz+.025,5,dt);
+  o.vx=THREE.MathUtils.damp(o.vx||0,motion.vx*appSettings.floatResponse+Math.sin(time*.3+o.seed)*.025,5,dt);
+  o.vz=THREE.MathUtils.damp(o.vz||0,motion.vz*appSettings.floatResponse+.025,5,dt);
   const nx=p.x+o.vx*dt,nz=p.z+o.vz*dt;
   if(environment.bankHeight(nx,nz)<-.05){p.x=nx;p.z=nz;}else{
     const gx=environment.bankHeight(p.x+.12,p.z)-environment.bankHeight(p.x-.12,p.z),gz=environment.bankHeight(p.x,p.z+.12)-environment.bankHeight(p.x,p.z-.12),len=Math.hypot(gx,gz)||1;
@@ -113,10 +132,10 @@ for(const o of debris){
   }
   const x=p.x,z=p.z,h=water.heightAt(x,z),dx=(water.heightAt(x+.12,z)-water.heightAt(x-.12,z))/.24,dz=(water.heightAt(x,z+.12)-water.heightAt(x,z-.12))/.24;
   const curl=(water.motionAt(x+.12,z).vz-water.motionAt(x-.12,z).vz-water.motionAt(x,z+.12).vx+water.motionAt(x,z-.12).vx)/.24;
-  p.y=.024+h;o.yaw+=dt*(.035+THREE.MathUtils.clamp(curl*.5,-1.5,1.5));
-  o.mesh.rotation.set(-Math.atan(dx*Math.sin(o.yaw)+dz*Math.cos(o.yaw)),o.yaw,Math.atan(dx*Math.cos(o.yaw)-dz*Math.sin(o.yaw)));
+  p.y=.024+h;o.yaw+=dt*(.035+THREE.MathUtils.clamp(curl*.5*appSettings.floatResponse,-1.5,1.5));
+  o.mesh.rotation.set(-Math.atan((dx*Math.sin(o.yaw)+dz*Math.cos(o.yaw))*appSettings.floatResponse),o.yaw,Math.atan((dx*Math.cos(o.yaw)-dz*Math.sin(o.yaw))*appSettings.floatResponse));
 }
 stoneThrows.update(dt,time);
 for(let i=drops.length-1;i>=0;i--){const o=drops[i];o.v.y-=dt*9.8;o.mesh.position.addScaledVector(o.v,dt);o.mesh.scale.set(.8,1+Math.min(1.7,Math.abs(o.v.y)*.25),.8);if(o.mesh.position.y<water.heightAt(o.mesh.position.x,o.mesh.position.z)){water.disturb(o.mesh.position.x,o.mesh.position.z,.012);scene.remove(o.mesh);drops.splice(i,1);}}
 inlet.update(dt,time);water.update(dt,time);postFX.render(dt);frames++;fpsTime+=Math.max((now-fpsLast)/1000,.001);fpsLast=now;if(fpsTime>.5){ui.setFPS(Math.round(frames/fpsTime));frames=0;fpsTime=0;}}
-water.setFlow(flow);requestAnimationFrame(frame);window.__komorebi={scene,camera,renderer,postFX,water,environment,vegetation,sky,clouds,petals,inlet,life,paperBoats,controls,setTool,splash,debris,stones,stoneThrows};
+applySettings(appSettings);requestAnimationFrame(frame);window.__komorebi={scene,camera,renderer,postFX,water,environment,vegetation,sky,clouds,petals,inlet,life,paperBoats,controls,setTool,splash,debris,stones,stoneThrows,applySettings,getSettings:()=>({...appSettings}),sun};

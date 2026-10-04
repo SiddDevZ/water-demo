@@ -9,7 +9,10 @@ try {
  const scene=new THREE.Scene(),water={heightAt:()=>0,disturb:()=>impulses++};
  const system=createStones(scene,water,()=>-1,{onImpact:(x,z)=>{events++;point=[x,z];}});
  assert(system.throwAt(1,-2,1,{position:new THREE.Vector3(4,6,12)}));
- for(let i=0;i<600;i++)system.update(1/120,i/120);
+ for(let i=0;i<30;i++)system.update(1/120,i/120);
+ assert.equal(events,1,'quick direct throw impacts within250ms');
+ assert(system.stones[0].age<=.251);
+ for(let i=30;i<600;i++)system.update(1/120,i/120);
  assert.equal(events,1,'one toss emits one impact event');
  assert.equal(impulses,1,'settling never repeats the water impulse');
  assert(Math.hypot(point[0]-1,point[1]+2)<.05,'ballistic impact lands within 5cm of target');

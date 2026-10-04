@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 
 export function createBoats(scene, water, bankHeight) {
+  let boatResponse=1;
+  function setSettings(config={}){config=config||{};if(typeof config.boatResponse==='number'&&Number.isFinite(config.boatResponse))boatResponse=THREE.MathUtils.clamp(config.boatResponse,0,2);}
   const boats=[];let accumulator=0;
   const points=[[-.62,.22,0],[.62,.22,0],[-.35,.10,-.23],[.35,.10,-.23],[-.35,.10,.23],[.35,.10,.23],[-.28,-.07,0],[.28,-.07,0],[0,.58,0],[-.38,.08,0],[.38,.08,0],[0,.08,-.20],[0,.08,.20]];
   const faces=[[0,2,6],[2,3,7],[2,7,6],[3,1,7],[0,6,4],[4,6,7],[4,7,5],[5,7,1],[0,4,9],[0,9,2],[1,10,5],[1,3,10],[9,8,11],[11,8,10],[10,8,12],[12,8,9]];
@@ -31,11 +33,11 @@ export function createBoats(scene, water, bankHeight) {
         const c=Math.cos(b.yaw),s=Math.sin(b.yaw);
         const bow=height(p.x+c*.4,p.z-s*.4),stern=height(p.x-c*.4,p.z+s*.4),port=height(p.x+s*.18,p.z+c*.18),starboard=height(p.x-s*.18,p.z-c*.18);
         const targetY=(bow+stern+port+starboard)*.25+.045;
-        const targetRoll=THREE.MathUtils.clamp(1.3*Math.atan2(bow-stern,.8),-.2,.2),targetPitch=THREE.MathUtils.clamp(-1.3*Math.atan2(port-starboard,.36),-.23,.23);
+        const targetRoll=THREE.MathUtils.clamp(boatResponse*1.3*Math.atan2(bow-stern,.8),-.2,.2),targetPitch=THREE.MathUtils.clamp(-boatResponse*1.3*Math.atan2(port-starboard,.36),-.23,.23);
         b.vy+=((targetY-p.y)*75-b.vy*9)*step;p.y+=b.vy*step;
         b.pitchVelocity+=((targetPitch-b.pitch)*100-b.pitchVelocity*8)*step;b.rollVelocity+=((targetRoll-b.roll)*90-b.rollVelocity*8)*step;b.pitch+=b.pitchVelocity*step;b.roll+=b.rollVelocity*step;
         const motion=water.motionAt?.(p.x,p.z)||{vx:0,vz:0};
-        const targetVx=motion.vx||0,targetVz=motion.vz||0;
+        const targetVx=(motion.vx||0)*boatResponse,targetVz=(motion.vz||0)*boatResponse;
         const drag=2.4;b.vx+=(targetVx-b.vx)*drag*step;b.vz+=(targetVz-b.vz)*drag*step;
         const nx=p.x+b.vx*step,nz=p.z+b.vz*step;
         if(Math.abs(nx)<8.5&&Math.abs(nz)<6.7&&safeHull(nx,nz,b.yaw)){p.x=nx;p.z=nz;}else{
@@ -48,7 +50,7 @@ export function createBoats(scene, water, bankHeight) {
         const bowMotion=water.motionAt?.(p.x+c*.4,p.z-s*.4)||motion;
         const sternMotion=water.motionAt?.(p.x-c*.4,p.z+s*.4)||motion;
         const shear=(bowMotion.vx-sternMotion.vx)*s+(bowMotion.vz-sternMotion.vz)*c;
-        const torque=Math.sin(angleError*2)*Math.hypot(targetVx,targetVz)*.7-shear*1.8;
+        const torque=Math.sin(angleError*2)*Math.hypot(targetVx,targetVz)*.7-shear*1.8*boatResponse;
         b.yawVelocity+=(torque-b.yawVelocity*1.6)*step;b.yaw+=b.yawVelocity*step;
 
       }
@@ -60,5 +62,5 @@ export function createBoats(scene, water, bankHeight) {
     }
   }
   function reset(){accumulator=0;for(const b of boats)scene.remove(b.mesh);boats.length=0;}
-  return {add,update,reset,boats};
+  return {add,update,reset,boats,setSettings};
 }

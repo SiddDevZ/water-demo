@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 export function createPetals(scene,water,bankHeight){
+  let floatResponse=1;
+  function setSettings(config={}){config=config||{};if(typeof config.floatResponse==='number'&&Number.isFinite(config.floatResponse))floatResponse=THREE.MathUtils.clamp(config.floatResponse,0,2);}
   const geometry=new THREE.PlaneGeometry(.19,.25,8,12),p=geometry.attributes.position;
   for(let i=0;i<p.count;i++){
     const x=p.getX(i),z=p.getY(i),t=(z+.125)/.25;
@@ -26,8 +28,8 @@ export function createPetals(scene,water,bankHeight){
       const motion=water.motionAt?.(o.x,o.z)||{vx:0,vz:0};
       const fluidX=THREE.MathUtils.clamp(Number(motion.vx)||0,-2.4,2.4),fluidZ=THREE.MathUtils.clamp(Number(motion.vz)||0,-2.4,2.4);
       const response=1-Math.exp(-dt*3.2);
-      o.vx+=(fluidX+Math.sin(time*.17+o.phase)*.013-o.vx)*response;
-      o.vz+=(fluidZ+.009-o.vz)*response;
+      o.vx+=(fluidX*floatResponse+Math.sin(time*.17+o.phase)*.013-o.vx)*response;
+      o.vz+=(fluidZ*floatResponse+.009-o.vz)*response;
       const nx=o.x+o.vx*dt,nz=o.z+o.vz*dt;
       if(bankHeight(nx,nz)<-.04){o.x=nx;o.z=nz;}else{
         // Sliding contact removes outward velocity rather than teleporting the petal.
@@ -37,13 +39,13 @@ export function createPetals(scene,water,bankHeight){
       }
       const ahead=water.motionAt?.(o.x+.10,o.z),behind=water.motionAt?.(o.x-.10,o.z),left=water.motionAt?.(o.x,o.z-.10),right=water.motionAt?.(o.x,o.z+.10);
       const curl=ahead&&behind&&left&&right?((ahead.vz-behind.vz)-(right.vx-left.vx))/.20:0;
-      o.spin=THREE.MathUtils.damp(o.spin,THREE.MathUtils.clamp((Number(curl)||0)*.32,-1.7,1.7),3,dt);o.angle+=dt*(.017+o.spin);
+      o.spin=THREE.MathUtils.damp(o.spin,THREE.MathUtils.clamp((Number(curl)||0)*.32*floatResponse,-1.7,1.7),3,dt);o.angle+=dt*(.017+o.spin);
       const dx=(water.heightAt(o.x+.08,o.z)-water.heightAt(o.x-.08,o.z))/.16;
       const dz=(water.heightAt(o.x,o.z+.08)-water.heightAt(o.x,o.z-.08))/.16;
       dummy.position.set(o.x,water.heightAt(o.x,o.z)+.022,o.z);
-      normal.set(-dx,1,-dz).normalize();tilt.setFromUnitVectors(up,normal);yaw.setFromAxisAngle(up,o.angle);dummy.quaternion.copy(tilt).multiply(yaw);
+      normal.set(-dx*floatResponse,1,-dz*floatResponse).normalize();tilt.setFromUnitVectors(up,normal);yaw.setFromAxisAngle(up,o.angle);dummy.quaternion.copy(tilt).multiply(yaw);
       dummy.scale.setScalar(o.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
     });mesh.instanceMatrix.needsUpdate=true;
   }
-  update(0,0);return {mesh,update};
+  update(0,0);return {mesh,update,setSettings};
 }

@@ -5,14 +5,16 @@
 // height only from shared face fluxes conserves volume across reflective shores.
 export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={}) {
   if(!(width>0&&depth>0&&Number.isInteger(nx)&&Number.isInteger(nz)&&nx>=8&&nz>=8))throw new Error('Invalid wave-field dimensions');
-  const count=nx*nz,dx=width/nx,dz=depth/nz,area=dx*dz,g=9.81,fixedStep=1/120;
+  const count=nx*nz,dx=width/nx,dz=depth/nz,area=dx*dz,fixedStep=1/120;
+  let g=9.81;
+  const settings={waveSpeed:1,waveDamping:1,stirRadius:.32,stonePower:1};
   const dominantWavelength=1.8,wavenumber=2*Math.PI/dominantWavelength;
   const heights=new Float32Array(count),texturePixelsRGBA=new Float32Array(count*4);
   const bed=new Float32Array(count),waterDepth=new Float32Array(count),effectiveDepth=new Float32Array(count),wet=new Uint8Array(count);
   const ux=new Float32Array((nx+1)*nz),uz=new Float32Array(nx*(nz+1));
   const faceDepthX=new Float32Array(ux.length),faceDepthZ=new Float32Array(uz.length);
   const dampingX=new Float32Array(ux.length),dampingZ=new Float32Array(uz.length);
-  let reboundSources=[];
+  let reboundSources=[],heldProfile=[],heldAge=0;
   let terrainFn=terrain,obstacles=[],accumulator=0,elapsed=0,stepCount=0,substeps=1,step=fixedStep;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const gridX=x=>(x+width/2)/dx-.5,gridZ=z=>(z+depth/2)/dz-.5;
@@ -20,10 +22,10 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
   function faceDamping(x,z){
     const distance=Math.min(x,nx-x,z,nz-z);
     const edge=Math.max(0,1-distance/10);
-    return Math.exp(-(.20+18*edge*edge)*step);
+    return Math.exp(-(.20*settings.waveDamping+18*edge*edge)*step);
   }
-  function rebuild(){
-    reboundSources=[];
+  function rebuild(preserveSources=false){
+    if(!preserveSources){endStir();reboundSources=[];}
     let deepest=0;
     for(let z=0;z<nz;z++)for(let x=0;x<nx;x++){
       const i=z*nx+x,wx=(x+.5)*dx-width/2,wz=(z+.5)*dz-depth/2;
@@ -53,18 +55,40 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
     for(let i=0;i<uz.length;i++)if(!faceDepthZ[i])uz[i]=0;
     fillTexture();
   }
+  function endStir(){
+    for(const [i,value] of heldProfile)heights[i]-=value;
+    heldProfile=[];heldAge=0;
+  }
+  function holdStir(x,z,strength){
+    endStir();if(!isWet(x,z))return;
+    const sigma=Math.max(.16,Math.min(.22,settings.stirRadius*.6)),radius=sigma*5;
+    const [x0,x1,z0,z1]=bounds(x,z,radius),cells=[];let innerSum=0,outerSum=0;
+    for(let iz=z0;iz<=z1;iz++)for(let ix=x0;ix<=x1;ix++){
+      const i=iz*nx+ix;if(!wet[i])continue;
+      const r2=((ix+.5)*dx-width/2-x)**2+((iz+.5)*dz-depth/2-z)**2;
+      const inner=Math.exp(-r2/(2*sigma*sigma)),outer=Math.exp(-r2/(8*sigma*sigma));cells.push([i,inner,outer]);innerSum+=inner;outerSum+=outer;
+    }
+    const amplitude=.040*Math.min(strength,1.2),balance=innerSum/Math.max(outerSum,1e-9);
+    heldProfile=cells.map(([i,a,b])=>[i,amplitude*(-a+balance*b)]);
+    for(const [i,value] of heldProfile)heights[i]+=value;
+  }
   function advance(){
+    // The immersed tool's balanced displacement follows its endpoint. Subtract
+    // it during free evolution so a stationary tool cannot continually pump waves.
+    heldAge+=step;if(heldAge>.16)endStir();
+    for(const [i,value] of heldProfile)heights[i]-=value;
+
     // One stone excavates a cavity; a short damped rebound drives its trailing
     // wave train. This is localized forcing, never prescribed travelling rings.
     // Each spatial profile sums to zero, so the source cannot add water volume.
     for(const source of reboundSources){
       source.age+=step;
-      const t=Math.min(source.age,1.2),window=(1-(t/1.2)**4)**2;
-      const value=1.05*Math.exp(-1.8*t)*Math.sin(2*Math.PI*t/.30)*window;
+      const t=Math.min(source.age,.85),window=(1-(t/.85)**4)**2;
+      const value=.70*Math.exp(-3*t)*Math.sin(2*Math.PI*t/.34)*window;
       const delta=value-source.previous;source.previous=value;
       for(const [i,profile] of source.cells)if(wet[i])heights[i]+=profile*delta;
     }
-    reboundSources=reboundSources.filter(source=>source.age<1.2-1e-12);
+    reboundSources=reboundSources.filter(source=>source.age<.85-1e-12);
 
     const gx=g*step/dx,gz=g*step/dz;
     for(let z=0;z<nz;z++)for(let x=1;x<nx;x++){
@@ -86,6 +110,7 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
       const fluxZ=(faceDepthZ[f]*uz[f]-faceDepthZ[b]*uz[b])/dz;
       heights[i]-=step*(fluxX+fluxZ);
     }
+    for(const [i,value] of heldProfile)heights[i]+=value;
   }
   function update(dt){
     if(!Number.isFinite(dt)||dt<=0){fillTexture();return;}
@@ -112,7 +137,7 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
       cells.push([i,inner,outer]);innerSum+=inner;outerSum+=outer;
     }
     if(outerSum<1e-8)return;
-    const balance=innerSum/outerSum,amplitude=.082*Math.min(clamp(strength,0,2),1.5);
+    const balance=innerSum/outerSum,amplitude=.057*clamp(strength,0,2)*settings.stonePower;
     // Balance against only wet cells, including truncated footprints near rocks.
     // One depression with displaced shoulders then evolves freely; no timed rings.
     let scale=1;
@@ -131,18 +156,19 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
   }
   function stirSegment(x0,z0,x1,z1,strength=1,dt=1/60){
     if(![x0,z0,x1,z1,strength,dt].every(Number.isFinite)||strength<=0)return;
+    if(strength>.2)holdStir(x1,z1,strength);
     const vx=x1-x0,vz=z1-z0,length=Math.hypot(vx,vz);if(length<.003)return;
     const tx=vx/length,tz=vz/length,px=-tz,pz=tx;
     const speed=length/Math.max(dt,.001),gain=clamp(strength,0,2)*clamp(Math.sqrt(speed/2),.5,1.6);
-    const samples=Math.max(1,Math.ceil(length/.09)),ds=length/samples,alongWidth=.28,acrossWidth=.32,radius=1.7;
+    const samples=Math.max(1,Math.ceil(length/.09)),ds=length/samples,alongWidth=settings.stirRadius*.875,acrossWidth=settings.stirRadius,radius=1.7;
     for(let sample=0;sample<samples;sample++){
       const t=(sample+.5)/samples,cx=x0+vx*t,cz=z0+vz*t;
       if(cx<-width/2-radius||cx>width/2+radius||cz<-depth/2-radius||cz>depth/2+radius)continue;
       const [bx0,bx1,bz0,bz1]=bounds(cx,cz,radius),impulse=1.48*gain*ds;
       // Momentum follows the finger, with a smaller sideways displacement.
       // Divergence creates the bow crest, rear depression and continuous wake.
-      // A weak outer counterflow closes the transverse circulation and adds a
-      // smooth trailing crest. The odd profile has zero net lateral momentum.
+      // Smooth lateral displacement is odd and has zero net lateral momentum;
+      // no imposed outer lobes manufacture repeated trailing wave bands.
       for(let z=bz0;z<=bz1;z++)for(let x=Math.max(1,bx0);x<=Math.min(nx-1,bx1+1);x++){
         const i=z*(nx+1)+x;if(!faceDepthX[i])continue;
         // Saturate forcing on already steep waves; do not clamp height/volume.
@@ -150,7 +176,7 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
         const ox=x*dx-width/2-cx,oz=(z+.5)*dz-depth/2-cz;
         const along=(ox*tx+oz*tz)/alongWidth,across=(ox*px+oz*pz)/acrossWidth;
         const envelope=Math.exp(-.5*(along*along+across*across));
-        ux[i]=clamp(ux[i]+sourceDamping*impulse*envelope*(tx*.85+px*across*.40*(1-.30*across*across)),-1.4,1.4);
+        ux[i]=clamp(ux[i]+sourceDamping*impulse*envelope*(tx*.85+px*across*.40),-1.4,1.4);
       }
       for(let z=Math.max(1,bz0);z<=Math.min(nz-1,bz1+1);z++)for(let x=bx0;x<=bx1;x++){
         const i=z*nx+x;if(!faceDepthZ[i])continue;
@@ -158,7 +184,7 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
         const ox=(x+.5)*dx-width/2-cx,oz=z*dz-depth/2-cz;
         const along=(ox*tx+oz*tz)/alongWidth,across=(ox*px+oz*pz)/acrossWidth;
         const envelope=Math.exp(-.5*(along*along+across*across));
-        uz[i]=clamp(uz[i]+sourceDamping*impulse*envelope*(tz*.85+pz*across*.40*(1-.30*across*across)),-1.4,1.4);
+        uz[i]=clamp(uz[i]+sourceDamping*impulse*envelope*(tz*.85+pz*across*.40),-1.4,1.4);
       }
     }
   }
@@ -190,7 +216,7 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
     }
     return output;
   }
-  function reset(){reboundSources=[];heights.fill(0);ux.fill(0);uz.fill(0);accumulator=0;elapsed=0;stepCount=0;fillTexture();}
+  function reset(){heldProfile=[];heldAge=0;reboundSources=[];heights.fill(0);ux.fill(0);uz.fill(0);accumulator=0;elapsed=0;stepCount=0;fillTexture();}
   function stats(){
     let mass=0,potential=0,kinetic=0,maxHeight=0,minHeight=0,maxVelocity=0,wetCells=0;
     for(let i=0;i<count;i++){mass+=heights[i]*area;potential+=.5*g*heights[i]**2*area;maxHeight=Math.max(maxHeight,heights[i]);minHeight=Math.min(minHeight,heights[i]);wetCells+=wet[i];}
@@ -199,7 +225,14 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
     return {mass,energy:potential+kinetic,maxHeight,minHeight,maxAbsHeight:Math.max(maxHeight,-minHeight),maxVelocity,wetCells,elapsed,stepCount,fixedStep,substeps,accumulator,dominantWavelength,activeImpacts:reboundSources.length};
   }
   rebuild();
-  return {heights,texturePixelsRGBA,update,disturb,stirSegment,heightAt,motionAt,fillTexture,reset,stats,
+  return {heights,texturePixelsRGBA,update,disturb,stirSegment,heightAt,motionAt,endStir,fillTexture,reset,stats,
+    getSettings(){return {...settings};},
+    setSettings(config={}){
+      const ranges={waveSpeed:[.5,1.6],waveDamping:[.4,2],stirRadius:[.15,.6],stonePower:[.3,1.5]};
+      for(const [key,range] of Object.entries(ranges))if(Number.isFinite(config[key]))settings[key]=clamp(config[key],...range);
+      g=9.81*settings.waveSpeed*settings.waveSpeed;
+      rebuild(true);return {...settings};
+    },
     setTerrain(fn){terrainFn=typeof fn==='function'?fn:null;rebuild();},
     setObstacles(list){obstacles=(list||[]).filter(o=>Number.isFinite(o.x+o.z+o.radius)&&o.radius>0);rebuild();},
   };

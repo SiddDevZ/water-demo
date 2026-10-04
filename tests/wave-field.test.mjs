@@ -4,7 +4,7 @@ const close=(a,b,t,message)=>assert.ok(Math.abs(a-b)<=t,`${message}: ${a} vs ${b
 const rmsDifference=(a,b)=>Math.sqrt(a.reduce((sum,h,i)=>sum+(h-b[i])**2,0)/a.length);
 function radius(f){let moment=0,total=0;f.heights.forEach((h,i)=>{const r2=((i%192+.5)*20/192-10)**2+((Math.floor(i/192)+.5)*16/154-8)**2;moment+=h*h*r2;total+=h*h;});return Math.sqrt(moment/total);}
 const impact=createWaveField();impact.disturb(0,0,1);
-assert.ok(impact.heightAt(0,0)<-.05,'Impact starts as a depression');
+assert.ok(impact.heightAt(0,0)<-.03,'Impact starts as a depression');
 assert.ok(impact.heightAt(.55,0)>0,'Displaced volume forms a shoulder');
 close(impact.stats().mass,0,1e-7,'Initial impulse conserves volume');
 const initialEnergy=impact.stats().energy;
@@ -45,18 +45,18 @@ console.log('Wave-field tests passed: depth speed, mass, damping, CFL, shore/obs
 const rebound=createWaveField();rebound.disturb(0,0,1);rebound.update(.9);
 let crests=0;
 for(let r=.2;r<2.4;r+=.05){const h=rebound.heightAt(r,0);if(h>.003&&h>rebound.heightAt(r-.05,0)&&h>=rebound.heightAt(r+.05,0))crests++;}
-assert.ok(crests>=3&&crests<=5,`One stone emits3–5 coherent concentric crests: ${crests}`);
+assert.ok(crests>=1&&crests<=3,`One stone emits a restrained short travelling packet: ${crests}`);
 close(rebound.stats().mass,0,1e-6,'Cavity rebound conserves water volume');
 assert.ok(rebound.stats().maxAbsHeight<.08,'Rebound stays gentle');
-rebound.update(.3);assert.equal(rebound.stats().activeImpacts,0,'Source stops after1.2seconds');
+rebound.update(.3);assert.equal(rebound.stats().activeImpacts,0,'Source stops within1.2seconds');
 rebound.update(1);close(rebound.stats().mass,0,1e-6,'Freely travelling packet retains volume');
-console.log('Single-impact cavity rebound: three resolved travelling crests, bounded amplitude, zero added volume, finite source lifetime.');
+console.log('Single-impact cavity rebound: restrained travelling crests, bounded amplitude, zero added volume, finite source lifetime.');
 
 const {bankHeight}=await import('../src/environment.js');
 const gardenImpact=createWaveField({terrain:bankHeight});gardenImpact.disturb(2.3,-.65,.85*1.65);
 assert.ok(gardenImpact.stats().maxAbsHeight<.15,'Default stone cavity stays below15cm');
 gardenImpact.update(.7);
-assert.ok(gardenImpact.stats().maxHeight>=.018&&gardenImpact.stats().maxHeight<.04,'Stone crests remain visible at700ms in the actual garden');
+assert.ok(gardenImpact.stats().maxHeight>=.009&&gardenImpact.stats().maxHeight<.04,'Stone crests remain visible at700ms in the actual garden');
 close(gardenImpact.stats().mass,0,1e-6,'Actual terrain impact preserves volume');
 const strong=createWaveField({terrain:bankHeight});strong.disturb(2.3,-.65,2);let strongPeak=0;
 for(let i=0;i<180;i++){strong.update(1/120);strongPeak=Math.max(strongPeak,strong.stats().maxAbsHeight);}
@@ -87,9 +87,9 @@ close(normalField.texturePixelsRGBA[offset*4+2],(normalField.heights[offset+192]
 const ribbon=createWaveField({terrain:bankHeight});
 for(let i=0;i<90;i++){const a=i/90,b=(i+1)/90;ribbon.stirSegment(-4+8*a,1.5+Math.sin(Math.PI*a),-4+8*b,1.5+Math.sin(Math.PI*b),.85,.02);ribbon.update(.02);}
 let visibleBands=0;for(let z=-1;z<4.9;z+=.05){const h=ribbon.heightAt(0,z);if(h>.003&&h>ribbon.heightAt(0,z-.05)&&h>=ribbon.heightAt(0,z+.05))visibleBands++;}
-assert.ok(visibleBands>=4,'Continuous curved drag has two main fronts and two weaker return-flow crests');
+assert.ok(visibleBands>=2&&visibleBands<=3,'Continuous curved drag has natural main fronts without manufactured repeating outer bands');
 close(ribbon.stats().mass,0,1e-6,'Return-flow forcing preserves volume');
-console.log('Slope texture and continuous return-flow bands pass.');
+console.log('Slope texture and natural continuous fronts pass.');
 
 // Production's 6.25cm mesh resolves the impact footprint with >2cells/sigma.
 const high=createWaveField({nx:320,nz:256,terrain:bankHeight});
@@ -99,7 +99,7 @@ for(let i=0;i<1200;i++){
   high.update(1/60);highPeak=Math.max(highPeak,high.stats().maxAbsHeight);
 }
 assert.ok(high.heights.every(Number.isFinite),'320x256 simulation remains finite for20s');
-assert.ok(highPeak<.18,`High-resolution combined source bounded: ${highPeak}`);
+assert.ok(highPeak<.10,`High-resolution combined source stays restrained: ${highPeak}`);
 close(high.stats().mass,0,2e-6,'High-resolution sources conserve volume');
 let dryCells=0;for(let z=0;z<256;z++)for(let x=0;x<320;x++)if(bankHeight((x+.5)*20/320-10,(z+.5)*16/256-8)>=-.018){dryCells++;assert.equal(high.heights[z*320+x],0,'High-resolution dry terrain remains dry');}
 assert.ok(dryCells>1000);
@@ -107,3 +107,34 @@ function ringAnisotropy(nx,nz){const f=createWaveField({nx,nz});f.disturb(0,0,1.
 const lowAnisotropy=ringAnisotropy(192,154),highAnisotropy=ringAnisotropy(320,256);
 assert.ok(highAnisotropy<lowAnisotropy,'Finer grid reduces angular wavefront amplitude bias');
 console.log('320x256 production regression:',{peak:highPeak,mass:high.stats().mass,dryCells,lowAnisotropy,highAnisotropy});
+
+const shortSource=createWaveField();shortSource.disturb(0,0,1.4);shortSource.update(.85);assert.equal(shortSource.stats().activeImpacts,0,'Stone forcing ends after .85 seconds');
+
+const adjustable=createWaveField();adjustable.disturb(0,0,1);adjustable.update(.1);const saved=adjustable.heights.slice(),active=adjustable.stats().activeImpacts;
+adjustable.setSettings({waveSpeed:1.6,waveDamping:2,stirRadius:.6,stonePower:1.5});assert.deepEqual(adjustable.heights,saved,'Settings preserve current water');assert.equal(adjustable.stats().activeImpacts,active,'Settings preserve active rebounds');
+const snapshot=adjustable.getSettings();snapshot.waveSpeed=20;assert.equal(adjustable.getSettings().waveSpeed,1.6);
+adjustable.setSettings({waveSpeed:8,stirRadius:-1});assert.equal(adjustable.getSettings().waveSpeed,1.6);assert.equal(adjustable.getSettings().stirRadius,.15);
+const slow=createWaveField(),fast=createWaveField();slow.setSettings({waveSpeed:.5});fast.setSettings({waveSpeed:1.6});for(const f of [slow,fast]){f.disturb(0,0,.1);f.update(.8);}assert.ok(radius(fast)>radius(slow)*2,'Speed controls wave propagation');
+const lowPower=createWaveField(),highPower=createWaveField();lowPower.setSettings({stonePower:.3});highPower.setSettings({stonePower:1.5});for(const f of [lowPower,highPower])f.disturb(0,0,1);assert.ok(highPower.stats().maxAbsHeight>lowPower.stats().maxAbsHeight*4,'Power changes one impact amplitude');
+const weakDamping=createWaveField(),strongDamping=createWaveField();weakDamping.setSettings({waveDamping:.4});strongDamping.setSettings({waveDamping:2});for(const f of [weakDamping,strongDamping]){f.disturb(0,0,.1);f.update(3);}assert.ok(strongDamping.stats().energy<weakDamping.stats().energy*.7,'Damping changes decay');
+for(const config of [{waveSpeed:.5,waveDamping:.4,stirRadius:.6,stonePower:1.5},{waveSpeed:1.6,waveDamping:2,stirRadius:.15,stonePower:1.5}]){const f=createWaveField({nx:320,nz:256,terrain:bankHeight});f.setSettings(config);f.disturb(0,0,2);for(let i=0;i<300;i++){if(i<90)f.stirSegment(-3+6*i/90,2,-3+6*(i+1)/90,2,.85,1/60);f.update(1/60);}assert.ok(f.heights.every(Number.isFinite));assert.ok(f.stats().maxAbsHeight<.4);close(f.stats().mass,0,3e-6,'Extreme settings preserve volume');}
+console.log('Live wave controls pass preservation, response, clamping and extreme-setting stability.');
+
+const finger=createWaveField({nx:320,nz:256,terrain:bankHeight});
+finger.stirSegment(.2,.3,.2,.3,.85,1/60);const dent=finger.heightAt(.2,.3);
+assert.ok(dent<-.02&&dent>-.035,'Tool immersion creates a local2–3cm dent at endpoint');
+for(let i=0;i<120;i++){finger.stirSegment(.2,.3,.2,.3,.85,1/60);finger.update(1/60);}
+close(finger.heightAt(.2,.3),dent,1e-6,'Stationary immersed tool does not repeatedly pump waves');
+close(finger.stats().mass,0,1e-6,'Held tool profile has zero displaced net volume');
+finger.endStir();assert.ok(finger.stats().maxAbsHeight<1e-6,'Releasing removes held immersion exactly once');finger.endStir();assert.ok(finger.stats().maxAbsHeight<1e-6);
+finger.stirSegment(.2,.3,.2,.3,.85,1/60);finger.update(.2);assert.ok(finger.stats().maxAbsHeight<1e-6,'Missing release automatically expires immersion');
+console.log('Moving tool profile: local immersion, no stationary pumping, conserved volume and idempotent release/timeout.');
+
+function poweredStone(power){const f=createWaveField({nx:320,nz:256,terrain:bankHeight});f.setSettings({stonePower:power});f.disturb(2.3,-.65,.85*1.65);return f;}
+const power11=poweredStone(1.1),power15=poweredStone(1.5);
+assert.ok(power15.stats().maxAbsHeight>power11.stats().maxAbsHeight*1.3,'Upper stone power slider remains responsive');
+const maximumStone=createWaveField({nx:320,nz:256,terrain:bankHeight});maximumStone.setSettings({stonePower:1.5});maximumStone.disturb(2.3,-.65,2);let maximumPeak=maximumStone.stats().maxAbsHeight;
+for(let i=0;i<240;i++){maximumStone.update(1/120);maximumPeak=Math.max(maximumPeak,maximumStone.stats().maxAbsHeight);}
+assert.ok(maximumPeak<.15,`Maximum tool and slider remain below15cm: ${maximumPeak}`);
+close(maximumStone.stats().mass,0,1e-6,'Maximum power still conserves water');
+console.log('Upper power slider response:',{at11:power11.stats().maxAbsHeight,at15:power15.stats().maxAbsHeight,maximumPeak});

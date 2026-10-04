@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 
 export function createStones(scene,water,bankHeight,{onImpact}={}){
+ const settings={stoneSize:1,throwDuration:.20,splashScale:1};
+ function setSettings(config={}){config=config||{};for(const [key,lo,hi]of [['stoneSize',.6,1.4],['throwDuration',.1,.6],['splashScale',0,1.5]]){if(typeof config[key]==='number'&&Number.isFinite(config[key]))settings[key]=THREE.MathUtils.clamp(config[key],lo,hi);}for(const stone of stones)stone.mesh.scale.set(.82,.57,.72).multiplyScalar(settings.stoneSize);}
  const stones=[],effects=[],group=new THREE.Group();group.name='One-stone water tosses';scene.add(group);
  const loader=new THREE.TextureLoader(),map=loader.load('/assets/terrain/dark_rock_02/dark_rock_02_diffuse_1k.jpg');map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=8;
  const geometry=new THREE.SphereGeometry(.16,24,16),material=new THREE.MeshStandardMaterial({map,color:0xffffff,roughness:.78,metalness:0});
@@ -35,20 +37,21 @@ export function createStones(scene,water,bankHeight,{onImpact}={}){
   const p=stone.mesh.position,power=THREE.MathUtils.clamp(stone.strength,.3,1.7);
   // This module owns exactly one water impulse. Callback is sound/life feedback only.
   water.disturb(p.x,p.z,Math.min(2,power*1.65));onImpact?.(p.x,p.z,power);
+  if(settings.splashScale===0)return;
   const material=new THREE.MeshStandardMaterial({color:'#e3f3f5',roughness:.12,metalness:0,side:THREE.DoubleSide,transparent:true,opacity:.30,depthWrite:false});
   const crown=new THREE.Mesh(sheetGeo,material);crown.position.set(p.x,surface(p.x,p.z),p.z);group.add(crown);
   const jet=new THREE.Mesh(new THREE.SphereGeometry(1,10,12),material);jet.position.copy(crown.position);group.add(jet);
-  const drops=[];for(let i=0;i<13;i++){const a=i/13*Math.PI*2+Math.random()*.25,mesh=new THREE.Mesh(dropletGeometry,dropletMaterial);mesh.position.copy(crown.position);const speed=.6+Math.random()*.75;const v=new THREE.Vector3(Math.cos(a)*speed,3.2+Math.random()*1.25,Math.sin(a)*speed);mesh.scale.setScalar(.75+Math.random()*.65);group.add(mesh);drops.push({mesh,v});}
+  const drops=[];for(let i=0;i<13;i++){const a=i/13*Math.PI*2+Math.random()*.25,mesh=new THREE.Mesh(dropletGeometry,dropletMaterial);mesh.position.copy(crown.position);const speed=(.6+Math.random()*.75)*settings.splashScale;const v=new THREE.Vector3(Math.cos(a)*speed,(3.2+Math.random()*1.25)*Math.sqrt(settings.splashScale),Math.sin(a)*speed);mesh.scale.setScalar((.75+Math.random()*.65)*settings.splashScale);group.add(mesh);drops.push({mesh,v});}
   effects.push({crown,jet,drops,age:0,power});
  }
  function throwAt(x,z,strength=1,camera){
   if(!Number.isFinite(x+z)||bankHeight(x,z)>-.14)return false;
-  const target=new THREE.Vector3(x,surface(x,z)+.075,z),start=target.clone();
+  const target=new THREE.Vector3(x,surface(x,z)+.075*settings.stoneSize,z),start=target.clone();
   const toward=new THREE.Vector3(camera?.position.x??x+3,0,camera?.position.z??z+5).sub(new THREE.Vector3(x,0,z)).normalize();
-  let distance=3.6;start.addScaledVector(toward,distance);start.y=Math.max(target.y+1.1,Math.min((camera?.position.y??4)*.45,2.8));
-  const duration=.70+Math.min(.18,distance*.02),velocity=target.clone().sub(start).divideScalar(duration);velocity.y+=9.8*duration*.5;
-  const mesh=new THREE.Mesh(geometry,material);mesh.name='Thrown river pebble';mesh.position.copy(start);mesh.scale.set(1,.66,.84);mesh.rotation.set(Math.random(),Math.random()*6.28,Math.random());mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
-  stones.push({mesh,velocity,strength,age:0,impacted:false,spin:new THREE.Vector3(3+Math.random()*3,4,2),settled:false});
+  const distance=1.25;start.addScaledVector(toward,distance);start.y=target.y+.65;
+  const duration=settings.throwDuration,velocity=target.clone().sub(start).divideScalar(duration);velocity.y+=9.8*duration*.5;
+  const mesh=new THREE.Mesh(geometry,material);mesh.name='Thrown river pebble';mesh.position.copy(start);mesh.scale.set(.82,.57,.72).multiplyScalar(settings.stoneSize);mesh.rotation.set(Math.random(),Math.random()*6.28,Math.random());mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
+  stones.push({mesh,velocity,strength,targetX:x,targetZ:z,duration,flightAge:0,age:0,impacted:false,spin:new THREE.Vector3(.35,.6,.2),settled:false});
   if(stones.length>14)group.remove(stones.shift().mesh);return true;
  }
  function update(dt,time){
@@ -57,19 +60,19 @@ export function createStones(scene,water,bankHeight,{onImpact}={}){
    for(let k=0;k<stepCount;k++){
     if(s.settled)break;const p=s.mesh.position,oldY=p.y;
     const gravity=s.impacted?3.2:9.8;if(s.impacted)s.velocity.multiplyScalar(Math.exp(-step*1.8));p.addScaledVector(s.velocity,step);p.y-=.5*gravity*step*step;s.velocity.y-=step*gravity;s.mesh.rotation.x+=s.spin.x*step;s.mesh.rotation.y+=s.spin.y*step;s.mesh.rotation.z+=s.spin.z*step;
-    const waterY=surface(p.x,p.z)+.075;
-    if(!s.impacted&&s.velocity.y<0&&oldY>=waterY&&p.y<=waterY){p.y=waterY;impact(s);}
-    const floor=bankHeight(p.x,p.z)+.09;if(s.impacted&&p.y<floor){p.y=floor;s.settled=true;s.mesh.rotation.x=.1;s.mesh.rotation.z=.15;}
+    s.flightAge+=step;const waterY=surface(s.targetX,s.targetZ)+.075*settings.stoneSize;
+    if(!s.impacted&&s.flightAge>=s.duration-1e-8){p.set(s.targetX,waterY,s.targetZ);impact(s);}
+    const floor=bankHeight(p.x,p.z)+.09*settings.stoneSize;if(s.impacted&&p.y<floor){p.y=floor;s.settled=true;s.mesh.rotation.x=.1;s.mesh.rotation.z=.15;}
    }
    if(s.age>18){group.remove(s.mesh);stones.splice(i,1);}
   }
-  for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.age+=dt;const t=e.age/.44;
-   e.crown.visible=t<1;const radius=.06+.47*e.age;e.crown.scale.set(radius,Math.max(.002,Math.sin(Math.min(1,t)*Math.PI)*.30),radius);e.crown.position.y=surface(e.crown.position.x,e.crown.position.z)+e.crown.scale.y*.42;e.crown.material.opacity=.44*Math.max(0,1-t);
-   const jetPhase=THREE.MathUtils.clamp((e.age-.07)/.50,0,1),jetHeight=.43*Math.sin(jetPhase*Math.PI);e.jet.visible=jetHeight>.008;e.jet.scale.set(.026,Math.max(.001,jetHeight*.5),.026);e.jet.position.y=surface(e.jet.position.x,e.jet.position.z)+jetHeight*.5;
-   for(const d of e.drops){d.v.y-=9.8*dt;d.mesh.position.addScaledVector(d.v,dt);d.mesh.scale.y=Math.max(.9,Math.abs(d.v.y)*.7);if(d.mesh.position.y<surface(d.mesh.position.x,d.mesh.position.z))d.mesh.visible=false;}
+  for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.age+=dt;const t=e.age/.44,scale=settings.splashScale;
+   e.crown.visible=t<1&&scale>0;const radius=(.045+.34*e.age)*scale;e.crown.scale.set(radius,Math.max(.002,Math.sin(Math.min(1,t)*Math.PI)*.14*scale),radius);e.crown.position.y=surface(e.crown.position.x,e.crown.position.z)+e.crown.scale.y*.42;e.crown.material.opacity=.28*Math.max(0,1-t);
+   const jetPhase=THREE.MathUtils.clamp((e.age-.07)/.50,0,1),jetHeight=.20*scale*Math.sin(jetPhase*Math.PI);e.jet.visible=jetHeight>.008;e.jet.scale.set(.026*scale,Math.max(.001,jetHeight*.5),.026*scale);e.jet.position.y=surface(e.jet.position.x,e.jet.position.z)+jetHeight*.5;
+   for(const d of e.drops){d.v.y-=9.8*dt;d.mesh.position.addScaledVector(d.v,dt);d.mesh.scale.y=Math.max(.9,Math.abs(d.v.y)*.7)*scale;if(scale===0)d.mesh.visible=false;if(d.mesh.position.y<surface(d.mesh.position.x,d.mesh.position.z))d.mesh.visible=false;}
    if(e.age>1.1){group.remove(e.crown,e.jet);e.jet.geometry.dispose();e.crown.material.dispose();e.drops.forEach(d=>group.remove(d.mesh));effects.splice(i,1);}
   }
  }
  function reset(){for(const s of stones)group.remove(s.mesh);stones.length=0;for(const e of effects){group.remove(e.crown,e.jet);e.jet.geometry.dispose();e.crown.material.dispose();e.drops.forEach(d=>group.remove(d.mesh));}effects.length=0;}
- return {group,stones,throwAt,update,reset};
+ return {group,stones,throwAt,update,reset,setSettings};
 }

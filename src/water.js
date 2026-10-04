@@ -72,6 +72,7 @@ export function createWater(scene,renderer,camera) {
   const uniforms={...THREE.UniformsUtils.clone(THREE.UniformsLib.lights),
     uTime:{value:0},uField:{value:field},uTerrain:{value:terrainTexture},uWaveGain:{value:1},
     uAbsorption:{value:new THREE.Vector3(4.2,.45,.10)},uScatterColor:{value:new THREE.Color(.005,.16,.48)},uScatterDensity:{value:.25},
+    uCausticStrength:{value:.9},uGlintStrength:{value:1},uRefractionStrength:{value:1},
     uColor:{value:transmission.texture},uDepth:{value:transmission.depthTexture},
     uReflection:{value:reflection.texture},uReflectionDepth:{value:reflection.depthTexture},
     uReflectionMatrix:{value:reflectMatrix},uReflectionInverse:{value:new THREE.Matrix4()},uReflectionWorld:{value:new THREE.Matrix4()},uReflectionWeight:{value:1},
@@ -108,6 +109,7 @@ export function createWater(scene,renderer,camera) {
       uniform float uReflectionWeight;
       uniform vec3 uSunColor,uAbsorption,uScatterColor;
       uniform float uScatterDensity;
+      uniform float uGlintStrength,uRefractionStrength;
       uniform sampler2D uColor;
       uniform sampler2D uDepth;
       uniform mat4 uInverseProjection;
@@ -161,7 +163,7 @@ export function createWater(scene,renderer,camera) {
         vec4 flatProjection=uProjection*viewMatrix*vec4(flatHit,1.);
         vec4 bentProjection=uProjection*viewMatrix*vec4(bentHitUnder,1.);
         vec2 distortion=(bentProjection.xy/bentProjection.w-flatProjection.xy/flatProjection.w)*.5;
-        distortion*=smoothstep(0.,.06,depthGap);
+        distortion*=smoothstep(0.,.06,depthGap)*uRefractionStrength;
         vec2 refractedUV = clamp(uv + distortion, vec2(0.002), vec2(0.998));
         float refractedDepth = texture2D(uDepth, refractedUV).r;
         vec3 hit = reconstruct(refractedUV, refractedDepth);
@@ -200,6 +202,9 @@ export function createWater(scene,renderer,camera) {
         float rayLength=min(reflectedHeight/max(reflected.y,.12),28.);
         vec3 bentHit=vWorld+reflected*rayLength;
         vec4 bentClip=uReflectionMatrix*vec4(bentHit,1.);
+        // The sky is at infinity. Treating it as a plane four metres above
+        // the pond suppressed its angular movement and hid cursor-local wakes.
+        if(mirrorDepth>=.99998)bentClip=uReflectionMatrix*vec4(reflected,0.);
         vec2 mirrorUV=bentClip.xy/bentClip.w*.5+.5;
         float mirrorValid=step(.001,bentClip.w)*step(.002,mirrorUV.x)*step(mirrorUV.x,.998)*step(.002,mirrorUV.y)*step(mirrorUV.y,.998);
         mirrorUV=clamp(mirrorUV,vec2(.002),vec2(.998));
@@ -219,10 +224,10 @@ export function createWater(scene,renderer,camera) {
         float D=a2/(3.14159265*denominator*denominator);
         float V=.5/max(nl*sqrt(nv*nv*(1.-a2)+a2)+nv*sqrt(nl*nl*(1.-a2)+a2),.0001);
         float F=.0204+.9796*pow(1.-vh,5.);
-        float glint=D*V*F*nl*.025;
+        float glint=D*V*F*nl*.065*uGlintStrength;
         // Finite-area sunlight and pixel slope variance limit unstable peaks.
-        glint=glint/(1.+glint/.4);
-        vec3 color=mix(water,reflection,fresnel)+uSunColor*glint*sunVisibility*(1.-uUnderwater);
+        glint=glint/(1.+glint/.65);
+        vec3 color=mix(water,reflection,fresnel*uReflectionWeight)+uSunColor*glint*sunVisibility*(1.-uUnderwater);
         float horizon = 1.0 - exp(-max(surfaceDepth - 140.0, 0.0) * 0.004);
         color = mix(color, sky(vec3(0.0, 0.02, 1.0)), horizon * 0.35);
         gl_FragColor = vec4(color, 1.0);
@@ -254,7 +259,7 @@ export function createWater(scene,renderer,camera) {
         const previousCompile=ground.onBeforeCompile,previousKey=ground.customProgramCacheKey,cacheKey=previousKey.call(ground);
         const compile=function(shader,activeRenderer){
           previousCompile.call(this,shader,activeRenderer);
-          shader.uniforms.uCausticMap={value:caustics.texture};shader.uniforms.uCausticSun=uniforms.uSun;
+          shader.uniforms.uCausticMap={value:caustics.texture};shader.uniforms.uCausticSun=uniforms.uSun;shader.uniforms.uCausticStrength=uniforms.uCausticStrength;
           shader.vertexShader=`varying vec3 vCausticWorld;\n${shader.vertexShader}`.replace('#include <worldpos_vertex>',`#include <worldpos_vertex>
             vec4 causticPosition=vec4(transformed,1.);
             #ifdef USE_BATCHING
@@ -265,7 +270,7 @@ export function createWater(scene,renderer,camera) {
             #endif
             vCausticWorld=(modelMatrix*causticPosition).xyz;
           `);
-          shader.fragmentShader='varying vec3 vCausticWorld;\nuniform sampler2D uCausticMap;\nuniform vec3 uCausticSun;\n'+shader.fragmentShader;
+          shader.fragmentShader='varying vec3 vCausticWorld;\nuniform sampler2D uCausticMap;\nuniform vec3 uCausticSun;\nuniform float uCausticStrength;\n'+shader.fragmentShader;
           shader.fragmentShader=shader.fragmentShader.replace('#include <shadowmap_pars_fragment>','#include <shadowmap_pars_fragment>\n#include <shadowmask_pars_fragment>');
           shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`
             float causticDepth=max(-vCausticWorld.y,0.);
@@ -276,7 +281,7 @@ export function createWater(scene,renderer,camera) {
             // Concentration and defocusing of real sunlight on the mineral bed.
             // Apply it to direct light so shadows and ambient fill remain natural.
             float focus=clamp(photons-1.,-.50,3.5);
-            float concentration=clamp(1.+focus*3.1,.08,8.);
+            float concentration=clamp(1.+focus*uCausticStrength,.25,3.);
             outgoingLight+=reflectedLight.directDiffuse*(concentration-1.)*submerged*upFacing;
             #include <opaque_fragment>
           `);
@@ -376,12 +381,26 @@ export function createWater(scene,renderer,camera) {
     terrainTexture.needsUpdate=true;lastOpticalTime=-Infinity;waveField.setTerrain(bankHeight);
   }
   return {mesh,update,disturb,stirSegment,setTerrain,
+    endStir(){waveField.endStir();},
     waveField,caustics,
+    setSettings(settings={}){
+      waveField.setSettings(settings);
+      const finite=(key,fallback,min,max)=>THREE.MathUtils.clamp(Number.isFinite(Number(settings[key]))?Number(settings[key]):fallback,min,max);
+      const clarity=finite('clarity',1,.5,2),blue=finite('waterBlue',1,.6,1.4);
+      uniforms.uAbsorption.value.set(4.2/clarity,.45*blue/clarity,.10/clarity);
+      uniforms.uScatterColor.value.set(.005,.16,.48*blue);uniforms.uScatterDensity.value=.25/clarity;
+      uniforms.uWaveGain.value=finite('wind',.65,0,1.3)/.65;
+      uniforms.uReflectionWeight.value=finite('reflections',1,0,1);
+      uniforms.uCausticStrength.value=finite('caustics',.9,0,1.8);
+      uniforms.uGlintStrength.value=finite('sunGlints',1,0,2);
+      uniforms.uRefractionStrength.value=finite('refraction',1,0,1.6);
+      lastOpticalTime=-Infinity;
+    },
     motionAt(x,z){return waveField.motionAt(x,z);},
     heightAt(x,z){return (sampleAmbientWaves(x,z,uniforms.uTime.value,uniforms.uWaveGain.value).height+waveField.heightAt(x,z))*terrainSample(x,z,1);},
     setFlow(value){uniforms.uWaveGain.value=THREE.MathUtils.clamp(Number(value)||0,0,2)/.65;},
     setSky(sky){skyObject=sky;},
-    setSun(direction,color){uniforms.uSun.value.copy(direction).normalize();if(color)uniforms.uSunColor.value.copy(color);},
+    setSun(direction,color,intensity=3.4){uniforms.uSun.value.copy(direction).normalize();if(color)uniforms.uSunColor.value.copy(color).multiplyScalar(Math.max(0,intensity)/3.4);lastOpticalTime=-Infinity;},
     setReflectionWeight(value){uniforms.uReflectionWeight.value=THREE.MathUtils.clamp(value,0,1);},
     setObstacles(list){waveField.setObstacles(list);attachCaustics();},
     reset(){waveField.reset();field.needsUpdate=true;lastOpticalTime=-Infinity;},
