@@ -1,0 +1,26 @@
+const {chromium}=require('../../jelly-hop/node_modules/playwright');
+const assert=require('node:assert/strict');
+const path=require('node:path');
+(async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist']});
+ const page=await browser.newPage({viewport:{width:1672,height:941},deviceScaleFactor:1,acceptDownloads:true});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ await page.goto('http://127.0.0.1:5190',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.__komorebi?.water.motionAt);
+ await page.evaluate(()=>Promise.all([window.__komorebi.environment.ready,window.__komorebi.vegetation.ready]));await page.waitForTimeout(2200);
+ const point=async(x,z)=>page.evaluate(({x,z})=>{const k=window.__komorebi,p=k.camera.position.clone().set(x,0,z).project(k.camera);return{x:(p.x*.5+.5)*innerWidth,y:(-.5*p.y+.5)*innerHeight};},{x,z});
+ const click=async(x,z)=>{const p=await point(x,z);await page.mouse.click(p.x,p.y);};
+ const shot=async name=>page.screenshot({path:path.resolve(`captures/waves-${name}.png`)});
+ const drag=async(fn,n=70)=>{await page.keyboard.press('1');const a=fn(0),start=await point(a[0],a[1]);await page.mouse.move(start.x,start.y);await page.mouse.down();for(let i=1;i<=n;i++){const t=i/n,v=fn(t),p=await point(v[0],v[1]);await page.mouse.move(p.x,p.y);await page.waitForTimeout(22);if(i===Math.floor(n*.7))await shot('stir');}await page.mouse.up();await page.mouse.move(1671,940);};
+ await shot('calm-ui');
+ await page.evaluate(()=>{const k=window.__komorebi,boat=k.paperBoats.boats[0],start=boat.mesh.position.clone();window.__wakeAudit={rock:0,boatTravel:0,stirStartled:0,stirFishSpeed:0,phase:'stir'};const tick=()=>{const a=window.__wakeAudit;a.rock=Math.max(a.rock,Math.abs(boat.pitch),Math.abs(boat.roll));a.boatTravel=Math.max(a.boatTravel,Math.hypot(boat.mesh.position.x-start.x,boat.mesh.position.z-start.z));if(a.phase==='stir'){const fish=k.life.getState();a.stirStartled=Math.max(a.stirStartled,fish.startled);a.stirFishSpeed=Math.max(a.stirFishSpeed,...fish.fish.map(f=>f.speed));}requestAnimationFrame(tick);};requestAnimationFrame(tick);});
+ await page.locator('.elements-toggle').click();await page.locator('#record-button').click();await page.locator('.elements-toggle').click();await page.keyboard.press('h');await page.mouse.move(1671,940);await page.waitForTimeout(750);await shot('calm');
+ await drag(t=>[3.3+t*3.1,.15+Math.sin(t*Math.PI)*.35],60);await page.waitForTimeout(700);await shot('boat');
+ await drag(t=>[-4+t*8,1.3+Math.sin(t*Math.PI)*1.1],80);await page.waitForTimeout(700);await shot('wake');await page.waitForTimeout(1700);
+ const stirAudit=await page.evaluate(()=>{window.__wakeAudit.phase='stone';return {...window.__wakeAudit};});
+ assert(stirAudit.rock>.02,'Dragging past the hull visibly rocks it');assert(stirAudit.boatTravel>.07,'Stirred water visibly moves the boat');assert(stirAudit.stirStartled>0,'Nearby koi react to actual stirred waves');assert(stirAudit.stirFishSpeed>.45,'Koi visibly accelerate during stirring');
+ await page.keyboard.press('2');await click(.9,1.7);await page.mouse.move(1671,940);await page.waitForFunction(()=>window.__komorebi.stones[0]?.impacted);await page.waitForTimeout(130);await shot('impact');await page.waitForTimeout(650);await shot('ripples');await page.waitForTimeout(1700);
+ const boat=await page.evaluate(()=>{const p=window.__komorebi.paperBoats.boats[0].mesh.position;return{x:p.x-.65,z:p.z+.18};});await click(boat.x,boat.z);await page.mouse.move(1671,940);await page.waitForFunction(()=>window.__komorebi.stones[1]?.impacted);await page.waitForTimeout(850);await shot('boat-impact');await page.waitForTimeout(1800);
+ await page.keyboard.press('1');await page.keyboard.press('h');const downloaded=page.waitForEvent('download');await page.locator('.elements-toggle').click();await page.locator('#record-button').click();await page.locator('.elements-toggle').click();await(await downloaded).saveAs(path.resolve('captures/visible-waves-demo.webm'));
+ const desktop=await page.evaluate(()=>({fps:document.querySelector('#fps').textContent,programs:window.__komorebi.renderer.info.programs.length,field:window.__komorebi.water.waveField.stats(),bodies:window.__wakeAudit,stoneImpacts:window.__komorebi.stones.filter(s=>s.impacted).length}));
+ await page.setViewportSize({width:390,height:844});await page.waitForTimeout(900);for(const t of ['stir','stone','leaf','rain','feed','boat']){const box=await page.locator(`[data-tool="${t}"]`).boundingBox();assert(box.x>=0&&box.x+box.width<=390,'mobile tool fits: '+t);}await shot('mobile');assert.deepEqual(errors,[]);console.log({status:'PASS',stirAudit,desktop,errors});await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});

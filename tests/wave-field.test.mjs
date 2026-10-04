@@ -62,3 +62,48 @@ const strong=createWaveField({terrain:bankHeight});strong.disturb(2.3,-.65,2);le
 for(let i=0;i<180;i++){strong.update(1/120);strongPeak=Math.max(strongPeak,strong.stats().maxAbsHeight);}
 assert.ok(strongPeak<.15,`Strongest stone remains bounded below15cm: ${strongPeak}`);
 console.log('Actual garden stone: visible travelling crests at700ms; maximum-power cavity remains below15cm.');
+
+function gardenStroke(fps){const f=createWaveField({terrain:bankHeight}),steps=fps*1.5;for(let i=0;i<steps;i++){f.stirSegment(-3+6*i/steps,2,-3+6*(i+1)/steps,2,.85,1/fps);f.update(1/fps);}return f;}
+const gardenDrag=gardenStroke(60),gardenDragFine=gardenStroke(120);
+assert.ok(gardenDrag.stats().maxHeight>.04&&gardenDrag.stats().maxHeight<.07,'Default real-terrain drag makes a4–7cm bow crest');
+assert.ok(rmsDifference(gardenDrag.heights,gardenDragFine.heights)<.001,'Actual-terrain drag remains event-cadence independent');
+gardenDrag.update(.6);
+let outwardPeak=0;for(let x=-3;x<4;x+=.15)for(const z of [.9,1.1,2.9,3.1])outwardPeak=Math.max(outwardPeak,Math.abs(gardenDrag.heightAt(x,z)));
+assert.ok(outwardPeak>.01,'Continuous wake propagates at least.9m laterally after release');
+close(gardenDrag.stats().mass,0,1e-6,'Real-terrain drag conserves volume');
+const sustained=createWaveField({terrain:bankHeight});let dragPeak=0;
+for(let i=0;i<1200;i++){const t=i/60;sustained.stirSegment(3*Math.sin(t*3),2*Math.cos(t*2),3*Math.sin((t+1/60)*3),2*Math.cos((t+1/60)*2),.85,1/60);sustained.update(1/60);dragPeak=Math.max(dragPeak,sustained.stats().maxAbsHeight);}
+assert.ok(dragPeak<.18,`Twenty seconds of fast repeated stirring stays below18cm: ${dragPeak}`);
+console.log('Real-terrain stirring: visible bow crest, outward wake, cadence consistency and sustained stability.');
+
+const normalField=createWaveField({terrain:(x)=>x>0?.2:-1});
+for(let i=0;i<normalField.heights.length;i++)normalField.heights[i]=i%192<96?.02:0;
+normalField.fillTexture();
+for(let z=0;z<154;z++)assert.equal(normalField.texturePixelsRGBA[(z*192+95)*4+1],0,'Reflective shore must not become a fake normal cliff');
+normalField.reset();normalField.disturb(-2,0,.1);normalField.update(.2);normalField.fillTexture();
+const ix=76,iz=77,offset=iz*192+ix;
+close(normalField.texturePixelsRGBA[offset*4+1],(normalField.heights[offset+1]-normalField.heights[offset-1])/(40/192),1e-7,'G stores metric x slope');
+close(normalField.texturePixelsRGBA[offset*4+2],(normalField.heights[offset+192]-normalField.heights[offset-192])/(32/154),1e-7,'B stores metric z slope');
+const ribbon=createWaveField({terrain:bankHeight});
+for(let i=0;i<90;i++){const a=i/90,b=(i+1)/90;ribbon.stirSegment(-4+8*a,1.5+Math.sin(Math.PI*a),-4+8*b,1.5+Math.sin(Math.PI*b),.85,.02);ribbon.update(.02);}
+let visibleBands=0;for(let z=-1;z<4.9;z+=.05){const h=ribbon.heightAt(0,z);if(h>.003&&h>ribbon.heightAt(0,z-.05)&&h>=ribbon.heightAt(0,z+.05))visibleBands++;}
+assert.ok(visibleBands>=4,'Continuous curved drag has two main fronts and two weaker return-flow crests');
+close(ribbon.stats().mass,0,1e-6,'Return-flow forcing preserves volume');
+console.log('Slope texture and continuous return-flow bands pass.');
+
+// Production's 6.25cm mesh resolves the impact footprint with >2cells/sigma.
+const high=createWaveField({nx:320,nz:256,terrain:bankHeight});
+high.disturb(2.3,-.65,1.4);let highPeak=high.stats().maxAbsHeight;
+for(let i=0;i<1200;i++){
+  if(i<90)high.stirSegment(-3+6*i/90,2,-3+6*(i+1)/90,2,.85,1/60);
+  high.update(1/60);highPeak=Math.max(highPeak,high.stats().maxAbsHeight);
+}
+assert.ok(high.heights.every(Number.isFinite),'320x256 simulation remains finite for20s');
+assert.ok(highPeak<.18,`High-resolution combined source bounded: ${highPeak}`);
+close(high.stats().mass,0,2e-6,'High-resolution sources conserve volume');
+let dryCells=0;for(let z=0;z<256;z++)for(let x=0;x<320;x++)if(bankHeight((x+.5)*20/320-10,(z+.5)*16/256-8)>=-.018){dryCells++;assert.equal(high.heights[z*320+x],0,'High-resolution dry terrain remains dry');}
+assert.ok(dryCells>1000);
+function ringAnisotropy(nx,nz){const f=createWaveField({nx,nz});f.disturb(0,0,1.4);f.update(.7);const peaks=[];for(let a=0;a<16;a++){const angle=a/16*Math.PI*2;let peak=-Infinity;for(let r=.65;r<1.2;r+=.0125)peak=Math.max(peak,f.heightAt(Math.cos(angle)*r,Math.sin(angle)*r));peaks.push(peak);}return (Math.max(...peaks)-Math.min(...peaks))/(peaks.reduce((a,b)=>a+b,0)/peaks.length);}
+const lowAnisotropy=ringAnisotropy(192,154),highAnisotropy=ringAnisotropy(320,256);
+assert.ok(highAnisotropy<lowAnisotropy,'Finer grid reduces angular wavefront amplitude bias');
+console.log('320x256 production regression:',{peak:highPeak,mass:high.stats().mass,dryCells,lowAnisotropy,highAnisotropy});

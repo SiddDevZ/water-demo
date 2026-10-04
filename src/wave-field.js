@@ -138,9 +138,11 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
     for(let sample=0;sample<samples;sample++){
       const t=(sample+.5)/samples,cx=x0+vx*t,cz=z0+vz*t;
       if(cx<-width/2-radius||cx>width/2+radius||cz<-depth/2-radius||cz>depth/2+radius)continue;
-      const [bx0,bx1,bz0,bz1]=bounds(cx,cz,radius),impulse=1.35*gain*ds;
+      const [bx0,bx1,bz0,bz1]=bounds(cx,cz,radius),impulse=1.48*gain*ds;
       // Momentum follows the finger, with a smaller sideways displacement.
       // Divergence creates the bow crest, rear depression and continuous wake.
+      // A weak outer counterflow closes the transverse circulation and adds a
+      // smooth trailing crest. The odd profile has zero net lateral momentum.
       for(let z=bz0;z<=bz1;z++)for(let x=Math.max(1,bx0);x<=Math.min(nx-1,bx1+1);x++){
         const i=z*(nx+1)+x;if(!faceDepthX[i])continue;
         // Saturate forcing on already steep waves; do not clamp height/volume.
@@ -148,7 +150,7 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
         const ox=x*dx-width/2-cx,oz=(z+.5)*dz-depth/2-cz;
         const along=(ox*tx+oz*tz)/alongWidth,across=(ox*px+oz*pz)/acrossWidth;
         const envelope=Math.exp(-.5*(along*along+across*across));
-        ux[i]=clamp(ux[i]+sourceDamping*impulse*envelope*(tx*.85+px*across*.30),-1.4,1.4);
+        ux[i]=clamp(ux[i]+sourceDamping*impulse*envelope*(tx*.85+px*across*.40*(1-.30*across*across)),-1.4,1.4);
       }
       for(let z=Math.max(1,bz0);z<=Math.min(nz-1,bz1+1);z++)for(let x=bx0;x<=bx1;x++){
         const i=z*nx+x;if(!faceDepthZ[i])continue;
@@ -156,7 +158,7 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
         const ox=(x+.5)*dx-width/2-cx,oz=z*dz-depth/2-cz;
         const along=(ox*tx+oz*tz)/alongWidth,across=(ox*px+oz*pz)/acrossWidth;
         const envelope=Math.exp(-.5*(along*along+across*across));
-        uz[i]=clamp(uz[i]+sourceDamping*impulse*envelope*(tz*.85+pz*across*.30),-1.4,1.4);
+        uz[i]=clamp(uz[i]+sourceDamping*impulse*envelope*(tz*.85+pz*across*.40*(1-.30*across*across)),-1.4,1.4);
       }
     }
   }
@@ -166,9 +168,26 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
     const a=heights[iz*nx+ix]*(1-fx)+heights[iz*nx+ix1]*fx,b=heights[iz1*nx+ix]*(1-fx)+heights[iz1*nx+ix1]*fx;
     return a*(1-fz)+b*fz;
   }
+  function motionAt(x,z){
+    if(!Number.isFinite(x+z)||!isWet(x,z))return {vx:0,vz:0,height:0};
+    const sample=(values,sx,sz,columns,rows)=>{
+      sx=clamp(sx,0,columns-1);sz=clamp(sz,0,rows-1);
+      const ix=Math.floor(sx),iz=Math.floor(sz),jx=Math.min(ix+1,columns-1),jz=Math.min(iz+1,rows-1),fx=sx-ix,fz=sz-iz;
+      return (values[iz*columns+ix]*(1-fx)+values[iz*columns+jx]*fx)*(1-fz)+(values[jz*columns+ix]*(1-fx)+values[jz*columns+jx]*fx)*fz;
+    };
+    return {vx:sample(ux,(x+width/2)/dx,gridZ(z),nx+1,nz),vz:sample(uz,gridX(x),(z+depth/2)/dz,nx,nz+1),height:heightAt(x,z)};
+  }
   function fillTexture(output=texturePixelsRGBA){
     if(output.length<count*4)throw new Error('Wave texture buffer too small');
-    for(let i=0;i<count;i++){output[i*4]=heights[i];output[i*4+1]=output[i*4+2]=0;output[i*4+3]=1;}
+    for(let z=0;z<nz;z++)for(let x=0;x<nx;x++){
+      const i=z*nx+x,h=heights[i];output[i*4]=h;
+      // Reflective ghost samples equal the wet cell itself. A dry neighbor is
+      // not a zero-height trough: using zero would invent a shoreline cliff.
+      const left=x>0&&wet[i-1]?heights[i-1]:h,right=x<nx-1&&wet[i+1]?heights[i+1]:h;
+      const back=z>0&&wet[i-nx]?heights[i-nx]:h,front=z<nz-1&&wet[i+nx]?heights[i+nx]:h;
+      output[i*4+1]=wet[i]?(right-left)/(2*dx):0;
+      output[i*4+2]=wet[i]?(front-back)/(2*dz):0;output[i*4+3]=1;
+    }
     return output;
   }
   function reset(){reboundSources=[];heights.fill(0);ux.fill(0);uz.fill(0);accumulator=0;elapsed=0;stepCount=0;fillTexture();}
@@ -180,7 +199,7 @@ export function createWaveField({width=20,depth=16,nx=192,nz=154,terrain=null}={
     return {mass,energy:potential+kinetic,maxHeight,minHeight,maxAbsHeight:Math.max(maxHeight,-minHeight),maxVelocity,wetCells,elapsed,stepCount,fixedStep,substeps,accumulator,dominantWavelength,activeImpacts:reboundSources.length};
   }
   rebuild();
-  return {heights,texturePixelsRGBA,update,disturb,stirSegment,heightAt,fillTexture,reset,stats,
+  return {heights,texturePixelsRGBA,update,disturb,stirSegment,heightAt,motionAt,fillTexture,reset,stats,
     setTerrain(fn){terrainFn=typeof fn==='function'?fn:null;rebuild();},
     setObstacles(list){obstacles=(list||[]).filter(o=>Number.isFinite(o.x+o.z+o.radius)&&o.radius>0);rebuild();},
   };

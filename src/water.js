@@ -4,7 +4,7 @@ import { createCaustics } from './caustics.js';
 
 // Low-amplitude wind chop; all interaction energy propagates through wave-field.js.
 // Optics use live planar captures, physical Fresnel and depth absorption.
-const WIND_WAVES=[[1,.32,.0027,3.8,6.10],[-.38,1,.003375,11.8,10.76],[.76,-.65,.00225,17.7,13.18],[-.9,-.24,.00135,23.,15.02],[.41,.91,.0018,7.3,8.46]];
+const WIND_WAVES=[[1,.32,.0027,3.8,6.10],[-.38,1,.00025,11.8,10.76],[.76,-.65,.00015,17.7,13.18],[-.9,-.24,.00010,23.,15.02],[.41,.91,.0008,7.3,8.46]];
 const waveGLSL = /* glsl */ `
   uniform float uTime,uWaveGain;
   uniform sampler2D uField,uTerrain;
@@ -20,20 +20,18 @@ const waveGLSL = /* glsl */ `
   vec3 waves(vec2 p,float footprint){
     vec3 result=vec3(0.);
     wind(p,vec2(1.,.32),.0027,3.8,6.10,footprint,result);
-    wind(p,vec2(-.38,1.),.003375,11.8,10.76,footprint,result);
-    wind(p,vec2(.76,-.65),.00225,17.7,13.18,footprint,result);
-    wind(p,vec2(-.9,-.24),.00135,23.,15.02,footprint,result);
-    wind(p,vec2(.41,.91),.0018,7.3,8.46,footprint,result);
+    wind(p,vec2(-.38,1.),.00025,11.8,10.76,footprint,result);
+    wind(p,vec2(.76,-.65),.00015,17.7,13.18,footprint,result);
+    wind(p,vec2(-.9,-.24),.00010,23.,15.02,footprint,result);
+    wind(p,vec2(.41,.91),.0008,7.3,8.46,footprint,result);
     vec2 uv=(p+vec2(10.,8.))/vec2(20.,16.);
     vec4 terrain=texture2D(uTerrain,uv);
     result*=uWaveGain;
     result.yz=result.yz*terrain.g+result.x*terrain.ba;
     result.x*=terrain.g;
-    float e=.105;
-    float h=texture2D(uField,uv).r;
-    vec2 slope=vec2(
-      texture2D(uField,uv+vec2(e/20.,0.)).r-texture2D(uField,uv-vec2(e/20.,0.)).r,
-      texture2D(uField,uv+vec2(0.,e/16.)).r-texture2D(uField,uv-vec2(0.,e/16.)).r)/(2.*e);
+    vec3 field=texture2D(uField,uv).rgb;
+    float h=field.r;
+    vec2 slope=field.gb;
     result.x+=h*terrain.g;
     result.yz+=slope*terrain.g+h*terrain.ba;
     return result;
@@ -53,7 +51,7 @@ export function sampleAmbientWaves(x,z,time,gain=1){
 }
 
 export function createWater(scene,renderer,camera) {
-  const NX=192,NZ=154,total=NX*NZ;
+  const NX=320,NZ=256,total=NX*NZ;
   const waveField=createWaveField({width:20,depth:16,nx:NX,nz:NZ});
   const pixels=waveField.texturePixelsRGBA;
   const terrainPixels=new Float32Array(total*4);
@@ -73,11 +71,11 @@ export function createWater(scene,renderer,camera) {
   const reflectCamera=camera.clone(),reflectMatrix=new THREE.Matrix4();
   const uniforms={...THREE.UniformsUtils.clone(THREE.UniformsLib.lights),
     uTime:{value:0},uField:{value:field},uTerrain:{value:terrainTexture},uWaveGain:{value:1},
-    uAbsorption:{value:new THREE.Vector3(5.,1.2,.08)},uScatterColor:{value:new THREE.Color(.001,.18,.38)},uScatterDensity:{value:.90},
+    uAbsorption:{value:new THREE.Vector3(4.2,.45,.10)},uScatterColor:{value:new THREE.Color(.005,.16,.48)},uScatterDensity:{value:.25},
     uColor:{value:transmission.texture},uDepth:{value:transmission.depthTexture},
     uReflection:{value:reflection.texture},uReflectionDepth:{value:reflection.depthTexture},
     uReflectionMatrix:{value:reflectMatrix},uReflectionInverse:{value:new THREE.Matrix4()},uReflectionWorld:{value:new THREE.Matrix4()},uReflectionWeight:{value:1},
-    uInverseProjection:{value:new THREE.Matrix4()},uCameraWorld:{value:new THREE.Matrix4()},
+    uProjection:{value:new THREE.Matrix4()},uInverseProjection:{value:new THREE.Matrix4()},uCameraWorld:{value:new THREE.Matrix4()},
     uNear:{value:camera.near},uFar:{value:camera.far},uWaterLevel:{value:0},uUnderwater:{value:0},
     uSun:{value:new THREE.Vector3(-90,28,-60).normalize()},uSunColor:{value:new THREE.Color(1,.84,.58)},
   };
@@ -113,6 +111,7 @@ export function createWater(scene,renderer,camera) {
       uniform sampler2D uColor;
       uniform sampler2D uDepth;
       uniform mat4 uInverseProjection;
+      uniform mat4 uProjection;
       uniform mat4 uCameraWorld;
       uniform float uNear;
       uniform float uFar;
@@ -147,13 +146,21 @@ export function createWater(scene,renderer,camera) {
         float sceneDepth = texture2D(uDepth, uv).r;
         float surfaceDepth = -(viewMatrix * vec4(vWorld, 1.0)).z;
         float depthGap = max(linearDepth(sceneDepth) - surfaceDepth, 0.0);
-        // Refraction bends with surface perturbations, not camera tilt.
-        // Using the absolute view normal offsets shallow object silhouettes twice.
-        vec3 viewNormal = mat3(viewMatrix) * (normal - vec3(0.0, 1.0, 0.0));
-        // Refraction follows the actual distance to a fish or the mineral bed.
-        float columnLength=max(-terrain.r,0.)/max(abs(toEye.y),.3);
-        float objectPath=min(columnLength,length(reconstruct(uv,sceneDepth)-vWorld));
-        vec2 distortion = viewNormal.xy * min(objectPath, 4.0) * 0.035 / max(surfaceDepth * 0.16, 1.0);
+        // Snell's law bends the view ray through the real displaced surface.
+        // Subtract its flat-surface projection so the capture's silhouettes
+        // keep their baseline position. The distance ends at the first object,
+        // so a shallow koi is not distorted as though it were on the bed.
+        vec3 firstHit=reconstruct(uv,sceneDepth);
+        float eta=uUnderwater>.5?1.333:1./1.333;
+        vec3 flatNormal=vec3(0.,uUnderwater>.5?-1.:1.,0.);
+        vec3 flatRay=refract(-toEye,flatNormal,eta);
+        vec3 bentRay=refract(-toEye,normal,eta);
+        float hitDepth=min(abs(firstHit.y-vWorld.y),4.);
+        vec3 flatHit=vWorld+flatRay*hitDepth/max(abs(flatRay.y),.25);
+        vec3 bentHitUnder=vWorld+bentRay*hitDepth/max(abs(bentRay.y),.25);
+        vec4 flatProjection=uProjection*viewMatrix*vec4(flatHit,1.);
+        vec4 bentProjection=uProjection*viewMatrix*vec4(bentHitUnder,1.);
+        vec2 distortion=(bentProjection.xy/bentProjection.w-flatProjection.xy/flatProjection.w)*.5;
         distortion*=smoothstep(0.,.06,depthGap);
         vec2 refractedUV = clamp(uv + distortion, vec2(0.002), vec2(0.998));
         float refractedDepth = texture2D(uDepth, refractedUV).r;
@@ -169,10 +176,9 @@ export function createWater(scene,renderer,camera) {
         if (refractedDepth > 0.99999) waterDistance = 65.0;
         // the underwater scene is already fogged by the main pass setup
         if (uUnderwater > 0.5) waterDistance = 0.0;
-        // Clear, sunlit margins graduate into the richer blue central basin.
-        vec3 absorption=uAbsorption;
-        absorption.y*=mix(.18,1.,smoothstep(.60,2.7,-terrain.r));
-        vec3 transmission = exp(-absorption * waterDistance);
+        // A single optical water volume: colour changes only with ray length,
+        // never with a painted depth band. Keep the mineral bed legible.
+        vec3 transmission = exp(-uAbsorption * waterDistance);
         vec3 refracted = texture2D(uColor, refractedUV).rgb;
         float sunVisibility=getShadowMask();
         // Selectively remove red while retaining blue/green bottom detail.
@@ -207,15 +213,15 @@ export function createWater(scene,renderer,camera) {
         float nv=max(dot(normal,toEye),.001),nl=max(dot(normal,uSun),0.);
         float nh=max(dot(normal,halfVector),0.),vh=max(dot(toEye,halfVector),0.);
         float variance=dot(dFdx(normal),dFdx(normal))+dot(dFdy(normal),dFdy(normal));
-        float alpha=clamp(.003+variance*1.4,.003,.055);
+        float alpha=clamp(.014+variance*1.4,.014,.060);
         float a2=alpha*alpha;
         float denominator=nh*nh*(a2-1.)+1.;
         float D=a2/(3.14159265*denominator*denominator);
         float V=.5/max(nl*sqrt(nv*nv*(1.-a2)+a2)+nv*sqrt(nl*nl*(1.-a2)+a2),.0001);
         float F=.0204+.9796*pow(1.-vh,5.);
-        float glint=D*V*F*nl*.14;
+        float glint=D*V*F*nl*.025;
         // Finite-area sunlight and pixel slope variance limit unstable peaks.
-        glint=glint/(1.+glint/2.);
+        glint=glint/(1.+glint/.4);
         vec3 color=mix(water,reflection,fresnel)+uSunColor*glint*sunVisibility*(1.-uUnderwater);
         float horizon = 1.0 - exp(-max(surfaceDepth - 140.0, 0.0) * 0.004);
         color = mix(color, sky(vec3(0.0, 0.02, 1.0)), horizon * 0.35);
@@ -267,9 +273,11 @@ export function createWater(scene,renderer,camera) {
             float photons=texture2D(uCausticMap,(vCausticWorld.xz+vec2(10.,8.))/vec2(20.,16.)).r;
             vec3 groundNormal=normalize(cross(dFdx(vCausticWorld),dFdy(vCausticWorld)));
             float upFacing=max(dot(groundNormal,normalize(uCausticSun)),0.);
-            // Restrained, surface-coupled concentration of actual refracted rays.
+            // Concentration and defocusing of real sunlight on the mineral bed.
+            // Apply it to direct light so shadows and ambient fill remain natural.
             float focus=clamp(photons-1.,-.50,3.5);
-            outgoingLight+=diffuseColor.rgb*vec3(.95,1.,.91)*focus*submerged*upFacing*1.05*getShadowMask();
+            float concentration=clamp(1.+focus*3.1,.08,8.);
+            outgoingLight+=reflectedLight.directDiffuse*(concentration-1.)*submerged*upFacing;
             #include <opaque_fragment>
           `);
         };
@@ -303,7 +311,7 @@ export function createWater(scene,renderer,camera) {
     if(!resized&&!cameraChanged&&opticalElapsed>=0&&opticalElapsed+1e-6<opticalPeriod) return;
     lastOpticalTime=time;
     cachedCameraWorld.copy(camera.matrixWorld);cachedProjection.copy(camera.projectionMatrix);
-    uniforms.uInverseProjection.value.copy(camera.projectionMatrixInverse);uniforms.uCameraWorld.value.copy(camera.matrixWorld);
+    uniforms.uProjection.value.copy(camera.projectionMatrix);uniforms.uInverseProjection.value.copy(camera.projectionMatrixInverse);uniforms.uCameraWorld.value.copy(camera.matrixWorld);
     reflectCamera.copy(camera);
     reflectCamera.position.y=-camera.position.y;
     camera.getWorldDirection(targetPoint).add(camera.position);
@@ -369,6 +377,7 @@ export function createWater(scene,renderer,camera) {
   }
   return {mesh,update,disturb,stirSegment,setTerrain,
     waveField,caustics,
+    motionAt(x,z){return waveField.motionAt(x,z);},
     heightAt(x,z){return (sampleAmbientWaves(x,z,uniforms.uTime.value,uniforms.uWaveGain.value).height+waveField.heightAt(x,z))*terrainSample(x,z,1);},
     setFlow(value){uniforms.uWaveGain.value=THREE.MathUtils.clamp(Number(value)||0,0,2)/.65;},
     setSky(sky){skyObject=sky;},

@@ -83,8 +83,14 @@ export function enhanceCloudSky(sky, sunPosition) {
       // No low-altitude haze layer, cards, or all-over white cloud coverage.
       if(direction.y>.016&&direction.z<-.23&&uCloudAmount>.001){
         float drift=sin(uCloudTime*.003)*1.6;
+        // Two small, high cumulus banks sit inside the pond's reflected sky.
+        // They use the same bounded volume integration as the distant clouds.
+        vec4 overheadLeft=traceCloud(direction,vec3(-30.+drift*.5,110.,-62.),vec3(20.,9.,18.),31.8);
+        cloudColor+=overheadLeft.rgb;transmission*=1.-overheadLeft.a;
+        vec4 overheadRight=traceCloud(direction,vec3(45.+drift*.4,100.,-70.),vec3(20.,9.,18.),47.2);
+        cloudColor+=transmission*overheadRight.rgb;transmission*=1.-overheadRight.a;
         vec4 a=traceCloud(direction,vec3(-5.+drift,44.,-115.),vec3(20.,10.5,14.),3.7);
-        cloudColor+=a.rgb;transmission*=1.-a.a;
+        cloudColor+=transmission*a.rgb;transmission*=1.-a.a;
         vec4 b=traceCloud(direction,vec3(-35.+drift*.65,18.,-165.),vec3(24.,7.8,12.5),11.2);
         cloudColor+=transmission*b.rgb;transmission*=1.-b.a;
         vec4 c=traceCloud(direction,vec3(29.+drift*.8,24.,-190.),vec3(31.,10.5,15.),23.4);

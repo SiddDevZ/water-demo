@@ -88,10 +88,10 @@ export function createLife(scene, water, bankHeight=()=>0) {
   function feed(x,z){if(!Number.isFinite(x)||!Number.isFinite(z))return;const point=projectWater(THREE.MathUtils.clamp(x,-6.3,6.3),THREE.MathUtils.clamp(z,-4.5,4.9));const fx=point.x,fz=point.z;food={x:fx,z:fz,created:elapsed,bits:Array.from({length:24},()=>({angle:rand()*6.28,radius:.08+rand()*.3}))};crumbs.count=24;water.disturb?.(fx,fz,.025,.2);}
   function spook(x,z,strength=1){
     if(!Number.isFinite(x)||!Number.isFinite(z))return;
-    const power=THREE.MathUtils.clamp(Number(strength)||0,0,2),radius=1.8+power;
+    const power=THREE.MathUtils.clamp(Number(strength)||0,0,2),radius=2.2+power*1.15;
     fishes.forEach(fish=>{const p=fish.mesh.position,dx=p.x-x,dz=p.z-z,distance=Math.hypot(dx,dz);if(distance>=radius)return;
       const angle=distance>.03?Math.atan2(dz,dx):fish.phase;
-      fish.startle={until:elapsed+1.3,created:elapsed,x:THREE.MathUtils.clamp(p.x+Math.cos(angle)*1.65,-6.5,6.5),z:THREE.MathUtils.clamp(p.z+Math.sin(angle)*1.65,-4.8,5),power:.5+power*.35};
+      fish.startle={until:elapsed+1.7,created:elapsed,x:THREE.MathUtils.clamp(p.x+Math.cos(angle)*2.25,-6.5,6.5),z:THREE.MathUtils.clamp(p.z+Math.sin(angle)*2.25,-4.8,5),power:.78+power*.48};
     });
   }
   // A cupped, asymmetric lamina with an open sinus and subtly rolled rim.
@@ -118,20 +118,30 @@ export function createLife(scene, water, bankHeight=()=>0) {
   // Two small dragonflies: a blue-green thorax, tapered abdomen and four pale wings.
   const insectBodyGeo=new THREE.SphereGeometry(1,6,4);const insectBodies=new THREE.InstancedMesh(insectBodyGeo,new THREE.MeshStandardMaterial({color:0x297b8b,metalness:.3,roughness:.4}),2);group.add(insectBodies);
   const wingShape=new THREE.Shape();wingShape.moveTo(0,0);wingShape.bezierCurveTo(.06,.012,.2,.015,.22,.045);wingShape.bezierCurveTo(.22,.085,.04,.06,0,0);const wingGeo=new THREE.ShapeGeometry(wingShape,8);wingGeo.rotateX(-Math.PI/2);const wings=new THREE.InstancedMesh(wingGeo,new THREE.MeshStandardMaterial({color:0xd9e4d9,transparent:true,opacity:.36,roughness:.38,side:THREE.DoubleSide,depthWrite:false}),8);group.add(wings);
-  function reset(){food=null;crumbs.count=0;fishes.forEach((fish,i)=>{fish.mesh.position.set(fish.home.x,fish.depth,fish.home.z);fish.startle=null;fish.currentSpeed=.3;fish.verticalVelocity=0;});}
+  function reset(){food=null;crumbs.count=0;fishes.forEach((fish,i)=>{fish.mesh.position.set(fish.home.x,fish.depth,fish.home.z);fish.startle=null;fish.currentSpeed=.3;fish.verticalVelocity=0;fish.wakeCooldown=0;fish.fluidX=fish.fluidZ=fish.fluidHeight=0;});}
   function update(dt,time){elapsed=time;dt=Math.min(dt,.06);
     for(let i=0;i<fishes.length;i++){
-      const fish=fishes[i],p=fish.mesh.position;if(fish.startle&&time>=fish.startle.until)fish.startle=null;const startle=fish.startle;let tx,tz;
+      const fish=fishes[i],p=fish.mesh.position;
+      const motion=water.motionAt?.(p.x,p.z)||{vx:0,vz:0,height:0};
+      const fluidX=THREE.MathUtils.clamp(Number(motion.vx)||0,-1.4,1.4),fluidZ=THREE.MathUtils.clamp(Number(motion.vz)||0,-1.4,1.4),fluidSpeed=Math.hypot(fluidX,fluidZ);
+      fish.fluidX=THREE.MathUtils.damp(fish.fluidX||0,fluidX,4.2,dt);fish.fluidZ=THREE.MathUtils.damp(fish.fluidZ||0,fluidZ,4.2,dt);
+      fish.fluidHeight=THREE.MathUtils.damp(fish.fluidHeight||0,THREE.MathUtils.clamp(Number(motion.height)||0,-.12,.12),3,dt);
+      if(fluidSpeed>.075&&time>(fish.wakeCooldown||0)&&!fish.startle){
+        const direction=Math.atan2(fluidZ,fluidX)+(i%2?.55:-.55),escape=projectWater(p.x+Math.cos(direction)*1.55,p.z+Math.sin(direction)*1.55,.38,.30);
+        fish.startle={until:time+1.1,created:time,x:escape.x,z:escape.z,power:.58+Math.min(.75,fluidSpeed*1.8)};
+        fish.wakeCooldown=time+2.7;
+      }
+      if(fish.startle&&time>=fish.startle.until)fish.startle=null;const startle=fish.startle;let tx,tz;
       if(startle){tx=startle.x;tz=startle.z;}else if(food){tx=food.x+Math.cos(time*.4+i*2.4)*.25;tz=food.z+Math.sin(time*.4+i*2.4)*.25;}else{tx=fish.home.x+Math.cos(time*.09+fish.phase)*1.25;tz=fish.home.z+Math.sin(time*.077+fish.phase)*.95;}
-      const dx=tx-p.x,dz=tz-p.z,distance=Math.hypot(dx,dz),target=Math.atan2(-dz,dx),difference=Math.atan2(Math.sin(target-fish.angle),Math.cos(target-fish.angle));const turnRate=startle?2.8:.72;fish.angle+=THREE.MathUtils.clamp(difference,-dt*turnRate,dt*turnRate);
-      const alarm=startle?Math.pow(Math.max(0,(startle.until-time)/1.3),.65):0;const stroke=.82+.18*Math.sin(time*1.35+fish.phase);const desiredSpeed=Math.min(1.3,fish.speed*(food?1.2:stroke)+alarm*(startle?.power||0))*THREE.MathUtils.clamp(distance,.22,1);fish.currentSpeed=THREE.MathUtils.damp(fish.currentSpeed,desiredSpeed,startle?8:2.8,dt);let speed=fish.currentSpeed;for(let j=0;j<fishes.length;j++){if(i===j)continue;const other=fishes[j].mesh.position,sq=p.distanceToSquared(other);if(sq<.64){p.x+=(p.x-other.x)*dt*.24;p.z+=(p.z-other.z)*dt*.24;}}
-      const nx=p.x+Math.cos(fish.angle)*speed*dt,nz=p.z-Math.sin(fish.angle)*speed*dt;
+      const dx=tx-p.x,dz=tz-p.z,distance=Math.hypot(dx,dz),target=Math.atan2(-dz,dx),difference=Math.atan2(Math.sin(target-fish.angle),Math.cos(target-fish.angle));const turnRate=startle?4.2:.72;fish.angle+=THREE.MathUtils.clamp(difference,-dt*turnRate,dt*turnRate);
+      const alarm=startle?Math.pow(Math.max(0,(startle.until-time)/(startle.until-startle.created)),.65):0;const stroke=.82+.18*Math.sin(time*1.35+fish.phase);const desiredSpeed=Math.min(1.8,fish.speed*(food?1.2:stroke)+alarm*(startle?.power||0))*THREE.MathUtils.clamp(distance,.22,1);fish.currentSpeed=THREE.MathUtils.damp(fish.currentSpeed,desiredSpeed,startle?8:2.8,dt);let speed=fish.currentSpeed;for(let j=0;j<fishes.length;j++){if(i===j)continue;const other=fishes[j].mesh.position,sq=p.distanceToSquared(other);if(sq<.64){p.x+=(p.x-other.x)*dt*.24;p.z+=(p.z-other.z)*dt*.24;}}
+      const nx=p.x+(Math.cos(fish.angle)*speed+fish.fluidX*.24)*dt,nz=p.z+(-Math.sin(fish.angle)*speed+fish.fluidZ*.24)*dt;
       if(safeWater(nx,nz,.38,.30)){p.x=nx;p.z=nz;}else{
         const gx=bankHeight(p.x+.3,p.z)-bankHeight(p.x-.3,p.z),gz=bankHeight(p.x,p.z+.3)-bankHeight(p.x,p.z-.3);
         fish.angle=Math.atan2(gz,-gx);fish.currentSpeed*=.7;
         if(!safeWater(p.x,p.z,.36,.3)){const safe=projectWater(p.x,p.z,.38,.30);p.x=safe.x;p.z=safe.z;}
       }
-      p.x=THREE.MathUtils.clamp(p.x,-6.7,6.7);p.z=THREE.MathUtils.clamp(p.z,-5,5.2);const targetDepth=fish.depth+Math.sin(time*.39+fish.phase)*.034+(food?Math.max(0,1-distance/1.3)*.065:0)-alarm*.025;fish.verticalVelocity+=(targetDepth-p.y)*dt*7;fish.verticalVelocity*=Math.exp(-dt*4.5);p.y=THREE.MathUtils.clamp(p.y+fish.verticalVelocity*dt,Math.max(-.29,bankHeight(p.x,p.z)+.19),-.11);fish.mesh.rotation.y=fish.angle;fish.mesh.rotation.z=THREE.MathUtils.damp(fish.mesh.rotation.z,Math.atan2(fish.verticalVelocity,Math.max(.2,speed))*.4,3,dt);fish.mesh.rotation.x=THREE.MathUtils.damp(fish.mesh.rotation.x,THREE.MathUtils.clamp(difference,-1,1)*-.035,3,dt);fish.swim.phase.value+=dt*(3.1+speed*7.8);fish.swim.amplitude.value=THREE.MathUtils.damp(fish.swim.amplitude.value,.022+speed*.058,4,dt);fish.swim.turn.value=THREE.MathUtils.damp(fish.swim.turn.value,THREE.MathUtils.clamp(difference,-1,1),4,dt);
+      p.x=THREE.MathUtils.clamp(p.x,-6.7,6.7);p.z=THREE.MathUtils.clamp(p.z,-5,5.2);const targetDepth=fish.depth+Math.sin(time*.39+fish.phase)*.034+(food?Math.max(0,1-distance/1.3)*.065:0)-alarm*.045+fish.fluidHeight*.22;fish.verticalVelocity+=(targetDepth-p.y)*dt*7;fish.verticalVelocity*=Math.exp(-dt*4.5);p.y=THREE.MathUtils.clamp(p.y+fish.verticalVelocity*dt,Math.max(-.29,bankHeight(p.x,p.z)+.19),-.11);fish.mesh.rotation.y=fish.angle;fish.mesh.rotation.z=THREE.MathUtils.damp(fish.mesh.rotation.z,Math.atan2(fish.verticalVelocity,Math.max(.2,speed))*.4,3,dt);fish.mesh.rotation.x=THREE.MathUtils.damp(fish.mesh.rotation.x,THREE.MathUtils.clamp(difference,-1,1)*-.035,3,dt);fish.swim.phase.value+=dt*(3.1+speed*7.8);fish.swim.amplitude.value=THREE.MathUtils.damp(fish.swim.amplitude.value,.022+speed*.058+alarm*.027,7,dt);fish.swim.turn.value=THREE.MathUtils.damp(fish.swim.turn.value,THREE.MathUtils.clamp(difference,-1,1),4,dt);
       if(food&&!startle&&distance<.35&&time-lastRipple>.8){water.disturb?.(p.x,p.z,.009,.1);lastRipple=time;food.bits.pop();}
     }
     if(food){const age=time-food.created;if(age>16||!food.bits.length){food=null;crumbs.count=0;}else{crumbs.count=food.bits.length;food.bits.forEach((bit,i)=>{const radius=bit.radius+Math.min(age*.008,.1),x=food.x+Math.cos(bit.angle)*radius,z=food.z+Math.sin(bit.angle)*radius;dummy.position.set(x,surface(x,z)+.014,z);dummy.rotation.set(0,bit.angle,0);dummy.scale.setScalar(Math.max(.35,1-age/22));dummy.updateMatrix();crumbs.setMatrixAt(i,dummy.matrix);});crumbs.instanceMatrix.needsUpdate=true;}}
@@ -140,5 +150,5 @@ export function createLife(scene, water, bankHeight=()=>0) {
     for(let i=0;i<2;i++){const phase=time*(.17+i*.014)+i*2.3,x=(i%2?-1:1)*(7.5+Math.sin(phase)*1.1),z=Math.sin(phase*.73)*5,y=Math.max(.3,bankHeight(x,z))+.7+Math.sin(phase*2)*.3;dummy.position.set(x,y,z);dummy.rotation.set(0,phase+.7,0);dummy.scale.set(.026,.021,.14);dummy.updateMatrix();insectBodies.setMatrixAt(i,dummy.matrix);for(let w=0;w<4;w++){dummy.position.set(x,y,z+(w>1?.045:-.025));dummy.rotation.set(0,phase+(w%2?Math.PI:0),Math.sin(time*42+i)*.28*(w%2?-1:1));dummy.scale.setScalar(.7);dummy.updateMatrix();wings.setMatrixAt(i*4+w,dummy.matrix);}}insectBodies.instanceMatrix.needsUpdate=true;wings.instanceMatrix.needsUpdate=true;
   }
   update(0,0);
-  return {group,update,feed,spook,reset,getState(){return {startled:fishes.filter(fish=>fish.startle&&fish.startle.until>elapsed).length,feeding:food!==null,foodRemaining:food?.bits.length||0,target:food?{x:food.x,z:food.z}:null,fish:fishes.map(fish=>({x:fish.mesh.position.x,y:fish.mesh.position.y,z:fish.mesh.position.z}))};},stats:{koi:6,dragonflies:2,lilyPads:0,flowers:0}};
+  return {group,update,feed,spook,reset,getState(){return {startled:fishes.filter(fish=>fish.startle&&fish.startle.until>elapsed).length,feeding:food!==null,foodRemaining:food?.bits.length||0,target:food?{x:food.x,z:food.z}:null,fish:fishes.map(fish=>({x:fish.mesh.position.x,y:fish.mesh.position.y,z:fish.mesh.position.z,speed:fish.currentSpeed,tailAmplitude:fish.swim.amplitude.value}))};},stats:{koi:6,dragonflies:2,lilyPads:0,flowers:0}};
 }

@@ -15,18 +15,33 @@ export function createPetals(scene,water,bankHeight){
     const r=Math.hypot(x/9,z/6.8);
     if(r<.65&&i%3){const a=Math.atan2(z/6.8,x/9);x=Math.cos(a)*9*(.70+rand()*.20);z=Math.sin(a)*6.8*(.70+rand()*.20);}
     while(bankHeight(x,z)>-.05){x*=.97;z*=.97;}
-    petals.push({x,z,angle:rand()*6.28,scale:.65+rand()*.55,phase:rand()*6.28});
+    petals.push({x,z,angle:rand()*6.28,scale:.65+rand()*.55,phase:rand()*6.28,vx:0,vz:0,spin:0});
     mesh.setColorAt(i,new THREE.Color().setHSL(.94+rand()*.025,.42+rand()*.15,.83+rand()*.13));
   }
-  const dummy=new THREE.Object3D();
+  const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),normal=new THREE.Vector3();
+  const tilt=new THREE.Quaternion(),yaw=new THREE.Quaternion();
   function update(dt,time){
+    dt=Math.max(0,Math.min(Number.isFinite(dt)?dt:0,.06));
     petals.forEach((o,i)=>{
-      o.x+=Math.sin(time*.17+o.phase)*dt*.013;o.z+=dt*.009;
-      if(bankHeight(o.x,o.z)>-.035){o.x*=.997;o.z*=.997;}
+      const motion=water.motionAt?.(o.x,o.z)||{vx:0,vz:0};
+      const fluidX=THREE.MathUtils.clamp(Number(motion.vx)||0,-2.4,2.4),fluidZ=THREE.MathUtils.clamp(Number(motion.vz)||0,-2.4,2.4);
+      const response=1-Math.exp(-dt*3.2);
+      o.vx+=(fluidX+Math.sin(time*.17+o.phase)*.013-o.vx)*response;
+      o.vz+=(fluidZ+.009-o.vz)*response;
+      const nx=o.x+o.vx*dt,nz=o.z+o.vz*dt;
+      if(bankHeight(nx,nz)<-.04){o.x=nx;o.z=nz;}else{
+        // Sliding contact removes outward velocity rather than teleporting the petal.
+        const gx=bankHeight(o.x+.08,o.z)-bankHeight(o.x-.08,o.z),gz=bankHeight(o.x,o.z+.08)-bankHeight(o.x,o.z-.08),length=Math.hypot(gx,gz);
+        if(length>.00001){const ax=gx/length,az=gz/length,outward=Math.max(0,o.vx*ax+o.vz*az);o.vx-=outward*ax;o.vz-=outward*az;}
+        o.vx*=Math.exp(-dt*4);o.vz*=Math.exp(-dt*4);
+      }
+      const ahead=water.motionAt?.(o.x+.10,o.z),behind=water.motionAt?.(o.x-.10,o.z),left=water.motionAt?.(o.x,o.z-.10),right=water.motionAt?.(o.x,o.z+.10);
+      const curl=ahead&&behind&&left&&right?((ahead.vz-behind.vz)-(right.vx-left.vx))/.20:0;
+      o.spin=THREE.MathUtils.damp(o.spin,THREE.MathUtils.clamp((Number(curl)||0)*.32,-1.7,1.7),3,dt);o.angle+=dt*(.017+o.spin);
       const dx=(water.heightAt(o.x+.08,o.z)-water.heightAt(o.x-.08,o.z))/.16;
       const dz=(water.heightAt(o.x,o.z+.08)-water.heightAt(o.x,o.z-.08))/.16;
       dummy.position.set(o.x,water.heightAt(o.x,o.z)+.022,o.z);
-      dummy.rotation.set(-Math.atan(dz)*.6,o.angle+time*.017,Math.atan(dx)*.6);
+      normal.set(-dx,1,-dz).normalize();tilt.setFromUnitVectors(up,normal);yaw.setFromAxisAngle(up,o.angle);dummy.quaternion.copy(tilt).multiply(yaw);
       dummy.scale.setScalar(o.scale);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
     });mesh.instanceMatrix.needsUpdate=true;
   }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export function createBoats(scene, water, bankHeight) {
-  const boats=[];
+  const boats=[];let accumulator=0;
   const points=[[-.62,.22,0],[.62,.22,0],[-.35,.10,-.23],[.35,.10,-.23],[-.35,.10,.23],[.35,.10,.23],[-.28,-.07,0],[.28,-.07,0],[0,.58,0],[-.38,.08,0],[.38,.08,0],[0,.08,-.20],[0,.08,.20]];
   const faces=[[0,2,6],[2,3,7],[2,7,6],[3,1,7],[0,6,4],[4,6,7],[4,7,5],[5,7,1],[0,4,9],[0,9,2],[1,10,5],[1,3,10],[9,8,11],[11,8,10],[10,8,12],[12,8,9]];
   const positions=[],colors=[],uv=[];
@@ -25,19 +25,18 @@ export function createBoats(scene, water, bankHeight) {
   // Four waterline samples support a damped rigid hull. It has inertia, rather than
   // snapping each frame to the center sample or directly to the current vector.
   function update(dt,time,flow=0){
-    dt=Math.min(Math.max(dt,0),.06);const steps=Math.max(1,Math.ceil(dt/.016)),step=dt/steps;
+    accumulator+=Math.max(0,Number.isFinite(dt)?dt:0);const step=1/120,steps=Math.floor((accumulator+1e-12)/step);accumulator=Math.max(0,accumulator-steps*step);
     for(const b of boats){const p=b.mesh.position;
       for(let sub=0;sub<steps;sub++){
         const c=Math.cos(b.yaw),s=Math.sin(b.yaw);
         const bow=height(p.x+c*.4,p.z-s*.4),stern=height(p.x-c*.4,p.z+s*.4),port=height(p.x+s*.18,p.z+c*.18),starboard=height(p.x-s*.18,p.z-c*.18);
         const targetY=(bow+stern+port+starboard)*.25+.045;
-        const targetRoll=THREE.MathUtils.clamp(Math.atan2(bow-stern,.8),-.2,.2),targetPitch=THREE.MathUtils.clamp(-Math.atan2(port-starboard,.36),-.23,.23);
-        b.vy+=((targetY-p.y)*31-b.vy*7.2)*step;p.y+=b.vy*step;
-        b.pitchVelocity+=((targetPitch-b.pitch)*26-b.pitchVelocity*6.8)*step;b.rollVelocity+=((targetRoll-b.roll)*23-b.rollVelocity*6.4)*step;b.pitch+=b.pitchVelocity*step;b.roll+=b.rollVelocity*step;
-        const slopeX=(height(p.x+.24,p.z)-height(p.x-.24,p.z))/.48,slopeZ=(height(p.x,p.z+.24)-height(p.x,p.z-.24))/.48;
-        const targetVx=Math.sin(time*.2+p.z*.52+b.phase)*.035+Math.sin(p.z*.38)*flow*.024-slopeX*.065;
-        const targetVz=.018+flow*.09+Math.cos(time*.22+p.x*.6)*.014-slopeZ*.065;
-        const drag=.9;b.vx+=(targetVx-b.vx)*drag*step;b.vz+=(targetVz-b.vz)*drag*step;
+        const targetRoll=THREE.MathUtils.clamp(1.3*Math.atan2(bow-stern,.8),-.2,.2),targetPitch=THREE.MathUtils.clamp(-1.3*Math.atan2(port-starboard,.36),-.23,.23);
+        b.vy+=((targetY-p.y)*75-b.vy*9)*step;p.y+=b.vy*step;
+        b.pitchVelocity+=((targetPitch-b.pitch)*100-b.pitchVelocity*8)*step;b.rollVelocity+=((targetRoll-b.roll)*90-b.rollVelocity*8)*step;b.pitch+=b.pitchVelocity*step;b.roll+=b.rollVelocity*step;
+        const motion=water.motionAt?.(p.x,p.z)||{vx:0,vz:0};
+        const targetVx=motion.vx||0,targetVz=motion.vz||0;
+        const drag=2.4;b.vx+=(targetVx-b.vx)*drag*step;b.vz+=(targetVz-b.vz)*drag*step;
         const nx=p.x+b.vx*step,nz=p.z+b.vz*step;
         if(Math.abs(nx)<8.5&&Math.abs(nz)<6.7&&safeHull(nx,nz,b.yaw)){p.x=nx;p.z=nz;}else{
           // Inelastic contact with the shallow bank; keep the hull within the basin.
@@ -45,15 +44,21 @@ export function createBoats(scene, water, bankHeight) {
           b.vx-=gx/len*.18*step;b.vz-=gz/len*.18*step;b.vx*=Math.exp(-step*2.2);b.vz*=Math.exp(-step*2.2);
           const sx=p.x+b.vx*step,sz=p.z+b.vz*step;if(bankHeight(sx,sz)<bankHeight(p.x,p.z)){p.x=sx;p.z=sz;}
         }
-        const currentAngle=Math.atan2(-b.vz,b.vx),angleError=Math.atan2(Math.sin(currentAngle-b.yaw),Math.cos(currentAngle-b.yaw));
-        const torque=Math.sin(angleError*2)*Math.hypot(b.vx,b.vz)*.14+Math.sin(time*.43+b.phase)*.008;
-        b.yawVelocity+=(torque-b.yawVelocity*.5)*step;b.yaw+=b.yawVelocity*step;
+        const currentAngle=Math.atan2(-targetVz,targetVx),angleError=Math.atan2(Math.sin(currentAngle-b.yaw),Math.cos(currentAngle-b.yaw));
+        const bowMotion=water.motionAt?.(p.x+c*.4,p.z-s*.4)||motion;
+        const sternMotion=water.motionAt?.(p.x-c*.4,p.z+s*.4)||motion;
+        const shear=(bowMotion.vx-sternMotion.vx)*s+(bowMotion.vz-sternMotion.vz)*c;
+        const torque=Math.sin(angleError*2)*Math.hypot(targetVx,targetVz)*.7-shear*1.8;
+        b.yawVelocity+=(torque-b.yawVelocity*1.6)*step;b.yaw+=b.yawVelocity*step;
+
       }
       b.mesh.rotation.set(b.pitch,b.yaw,b.roll,'YXZ');
-      // A faint intermittent wake makes travel readable without manufacturing large waves.
-      if(time-b.wake>1.5&&Math.hypot(b.vx,b.vz)>.085){water.disturb?.(p.x-Math.cos(b.yaw)*.38,p.z+Math.sin(b.yaw)*.38,.007);b.wake=time;}
+      // Only a travelling hull displaces water; never stamp periodic radial drops.
+      const travelled=Math.hypot(p.x-(b.lastX??p.x),p.z-(b.lastZ??p.z));
+      if(travelled>.003&&Math.hypot(b.vx,b.vz)>.12)water.stirSegment?.(b.lastX,b.lastZ,p.x,p.z,.025,steps*step);
+      b.lastX=p.x;b.lastZ=p.z;
     }
   }
-  function reset(){for(const b of boats)scene.remove(b.mesh);boats.length=0;}
+  function reset(){accumulator=0;for(const b of boats)scene.remove(b.mesh);boats.length=0;}
   return {add,update,reset,boats};
 }

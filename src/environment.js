@@ -17,15 +17,15 @@ export function bankHeight(x,z){
   const radius=springRadius(x,z);
   let y;
   if(radius<=1){
-    const frontProfile=-1.72+1.26*THREE.MathUtils.smoothstep(radius,0,.70)+.46*THREE.MathUtils.smoothstep(radius,.70,1);
-    const rearProfile=-1.72+1.26*THREE.MathUtils.smoothstep(radius,.50,.86)+.46*THREE.MathUtils.smoothstep(radius,.86,1);
-    y=THREE.MathUtils.lerp(frontProfile,rearProfile,1-THREE.MathUtils.smoothstep(z,-1,1.7));
+    // A common blue-water bowl, with shallow mineral shelves only near shore.
+    // The center stays broad and almost level rather than splitting front/rear.
+    y=-1.50*(1-THREE.MathUtils.smoothstep(radius,.50,1.));
     y+=.009*Math.sin(x*.93+z*.27)*Math.cos(z*.8)*(1-radius);
-    // A deeper rear spring pocket broadens the blue water toward the far bank.
+    // A restrained spring pocket adds natural depth variation without a color divide.
     // Its shore fade preserves the exact zero-height outline and sandy lip.
     const rearPocket=Math.exp(-Math.pow((x-1.0)/5.3,4)-Math.pow((z+2.8)/3.5,4));
     const pocketShore=1-THREE.MathUtils.smoothstep(radius,.64,.98);
-    y-=.94*rearPocket*pocketShore;
+    y-=.18*rearPocket*pocketShore;
   }else{
     const rise=THREE.MathUtils.smoothstep(radius,1,1.28),roll=THREE.MathUtils.smoothstep(radius,1.06,1.6);
     y=.34*rise+roll*(.14*Math.sin(x*.23+z*.16)+.11*Math.cos(z*.31-x*.07));
@@ -58,6 +58,11 @@ export function createEnvironment(scene){
       vec3 shelf=vec3(.64,.48,.24)*mix(.40,1.18,smoothstep(.06,.28,mineralLight));
       float shallowShelf=smoothstep(-1.18,-.25,vTerrainPosition.y);
       vec3 mineral=mix(fineSand,shelf,shallowShelf);
+      // Quiet the fine photograph below water so coherent refracted light and
+      // wave distortion remain legible. Dry banks retain their original detail.
+      float submergedQuiet=smoothstep(.015,.20,-vTerrainPosition.y);
+      vec3 quietSand=vec3(.64,.48,.24)*mix(.82,.79,shallowShelf);
+      mineral=mix(mineral,quietSand,submergedQuiet*.50);
       float grassBlend=smoothstep(.005,.06,vTerrainPosition.y);
       vec3 meadowScan=texture2D(uGrassMap,vTerrainPosition.xz*.48).rgb;
       float meadowLight=dot(meadowScan,vec3(.2126,.7152,.0722));

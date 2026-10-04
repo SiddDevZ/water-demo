@@ -24,7 +24,7 @@ const controls=new OrbitControls(camera,canvas);controls.target.set(0,0,2.1);con
 scene.add(new THREE.HemisphereLight('#eefcff','#bdcc74',1.05));
 // Side light shapes the stone and sends the canopy's dappled shadows across the bank.
 // Soft sky illumination preserves colour inside those shadows without flattening them.
-const sun=new THREE.DirectionalLight('#fff1d4',3.2);sun.position.set(8,23,-14);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);Object.assign(sun.shadow.camera,{left:-15,right:15,top:19,bottom:-15,near:1,far:100});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.00012;sun.shadow.normalBias=.008;scene.add(sun);const fill=new THREE.DirectionalLight('#d0edff',.22);fill.position.set(5,7,12);scene.add(fill);
+const sun=new THREE.DirectionalLight('#fff1d4',3.2);sun.position.set(3.8,23,-16);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);Object.assign(sun.shadow.camera,{left:-15,right:15,top:19,bottom:-15,near:1,far:100});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.00012;sun.shadow.normalBias=.008;scene.add(sun);const fill=new THREE.DirectionalLight('#d0edff',.22);fill.position.set(5,7,12);scene.add(fill);
 // Clear daylight gives the spring a blue sky reflection and fresh, neutral fill.
 const sky=new Sky();sky.scale.setScalar(250);scene.add(sky);
 const skyUniforms=sky.material.uniforms;
@@ -60,7 +60,7 @@ const lp=[],lu=[],li=[];for(let j=0;j<=12;j++){const t=j/12,width=Math.pow(Math.
 const leafGeometry=new THREE.BufferGeometry();leafGeometry.setAttribute('position',new THREE.Float32BufferAttribute(lp,3));leafGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(lu,2));leafGeometry.setIndex(li);leafGeometry.computeVertexNormals();
 const leafMats=['#f0edbf','#ffe5b4','#b6d693'].map(color=>new THREE.MeshStandardMaterial({map:leafTex,color,roughness:.55,side:THREE.DoubleSide}));
 const dropGeo=new THREE.SphereGeometry(.018,8,5),dropMat=new THREE.MeshStandardMaterial({color:'#d7f3ee',metalness:.32,roughness:.09,transparent:true,opacity:.72,envMapIntensity:1.4});
-function leaf(x,z){for(let i=0;i<24&&environment.bankHeight(x,z)>-.10;i++){x*=.92;z*=.92;}const mesh=new THREE.Mesh(leafGeometry,leafMats[Math.floor(Math.random()*3)]);mesh.scale.setScalar(1.3);mesh.position.set(x,.06,z);mesh.rotation.y=Math.random()*6.28;scene.add(mesh);debris.push({mesh,seed:Math.random()*10,yaw:mesh.rotation.y});if(debris.length>55)scene.remove(debris.shift().mesh);}
+function leaf(x,z){for(let i=0;i<24&&environment.bankHeight(x,z)>-.10;i++){x*=.92;z*=.92;}const mesh=new THREE.Mesh(leafGeometry,leafMats[Math.floor(Math.random()*3)]);mesh.scale.setScalar(1.3);mesh.position.set(x,.06,z);mesh.rotation.y=Math.random()*6.28;scene.add(mesh);debris.push({mesh,seed:Math.random()*10,yaw:mesh.rotation.y,vx:0,vz:0});if(debris.length>55)scene.remove(debris.shift().mesh);}
 leaf(-2.26,-.47);leaf(3.51,-1.14);leaf(.66,2.32);leaf(2.59,4.00);
 const rainPositions=new Float32Array(440*6),rainSeeds=[];for(let i=0;i<440;i++){rainSeeds.push({x:(Math.random()-.5)*19,z:(Math.random()-.5)*15,y:Math.random()*13,speed:9+Math.random()*5});}
 const rainGeometry=new THREE.BufferGeometry();rainGeometry.setAttribute('position',new THREE.BufferAttribute(rainPositions,3));const rainLines=new THREE.LineSegments(rainGeometry,new THREE.LineBasicMaterial({color:'#cededb',transparent:true,opacity:.2,depthWrite:false}));rainLines.visible=false;scene.add(rainLines);
@@ -101,8 +101,21 @@ canvas.addEventListener('pointercancel',()=>{down=false;strokePoint=null;});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);postFX.resize(innerWidth,innerHeight);});
 let last=performance.now(),frames=0,fpsTime=0,fpsLast=performance.now(),lastShadowTime=-Infinity;
-function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.04);last=now;time+=dt;if(soundOn&&time>nextBird){birdsong();nextBird=time+8+Math.random()*9;}controls.update();clouds.update(dt,time);if(time-lastShadowTime>(stones.some(s=>!s.impacted)?1/30:1/8)){renderer.shadowMap.needsUpdate=true;lastShadowTime=time;}environment.update?.(dt,time);vegetation.update(dt,time);petals.update(dt,time);life.update(dt,time);paperBoats.update(dt,time,flow);if(pointerMark.visible)pointerMark.position.y=.045+water.heightAt(pointerMark.position.x,pointerMark.position.z);if(raining){for(let i=0;i<rainSeeds.length;i++){const p=rainSeeds[i];p.y-=dt*p.speed;p.x+=dt*.24;if(p.y<0){if(environment.bankHeight(p.x,p.z)<-.05)water.disturb(p.x,p.z,.055+.065*strength);p.y=8+Math.random()*5;p.x=(Math.random()-.5)*19;p.z=(Math.random()-.5)*15;}rainPositions.set([p.x,p.y,p.z,p.x-.007,p.y+.22,p.z],i*6);}rainGeometry.attributes.position.needsUpdate=true;}
-for(const o of debris){o.mesh.position.x+=Math.sin(time*.3+o.seed)*dt*.045;o.mesh.position.z+=dt*(.035+flow*.14);if(o.mesh.position.z>6.5||environment.bankHeight(o.mesh.position.x,o.mesh.position.z)>-.05){o.mesh.position.z=-5.3;o.mesh.position.x=(Math.random()-.5)*9;for(let j=0;j<24&&environment.bankHeight(o.mesh.position.x,o.mesh.position.z)>-.10;j++){o.mesh.position.x*=.92;o.mesh.position.z*=.92;}}const x=o.mesh.position.x,z=o.mesh.position.z;const h=water.heightAt(x,z),dx=(water.heightAt(x+.12,z)-water.heightAt(x-.12,z))/.24,dz=(water.heightAt(x,z+.12)-water.heightAt(x,z-.12))/.24;o.mesh.position.y=.024+h;o.yaw+=dt*.035;o.mesh.rotation.set(-Math.atan(dx*Math.sin(o.yaw)+dz*Math.cos(o.yaw)),o.yaw,Math.atan(dx*Math.cos(o.yaw)-dz*Math.sin(o.yaw)));}
+function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.04);last=now;time+=dt;if(soundOn&&time>nextBird){birdsong();nextBird=time+8+Math.random()*9;}controls.update();clouds.update(dt,time);if(time-lastShadowTime>((down||stones.some(s=>!s.impacted)||life.getState().startled>0||paperBoats.boats.some(b=>Math.hypot(b.vx,b.vz)>.15))?1/30:1/15)){renderer.shadowMap.needsUpdate=true;lastShadowTime=time;}environment.update?.(dt,time);vegetation.update(dt,time);petals.update(dt,time);life.update(dt,time);paperBoats.update(dt,time,flow);if(pointerMark.visible)pointerMark.position.y=.045+water.heightAt(pointerMark.position.x,pointerMark.position.z);if(raining){for(let i=0;i<rainSeeds.length;i++){const p=rainSeeds[i];p.y-=dt*p.speed;p.x+=dt*.24;if(p.y<0){if(environment.bankHeight(p.x,p.z)<-.05)water.disturb(p.x,p.z,.055+.065*strength);p.y=8+Math.random()*5;p.x=(Math.random()-.5)*19;p.z=(Math.random()-.5)*15;}rainPositions.set([p.x,p.y,p.z,p.x-.007,p.y+.22,p.z],i*6);}rainGeometry.attributes.position.needsUpdate=true;}
+for(const o of debris){
+  const p=o.mesh.position,motion=water.motionAt(p.x,p.z);
+  o.vx=THREE.MathUtils.damp(o.vx||0,motion.vx+Math.sin(time*.3+o.seed)*.025,5,dt);
+  o.vz=THREE.MathUtils.damp(o.vz||0,motion.vz+.025,5,dt);
+  const nx=p.x+o.vx*dt,nz=p.z+o.vz*dt;
+  if(environment.bankHeight(nx,nz)<-.05){p.x=nx;p.z=nz;}else{
+    const gx=environment.bankHeight(p.x+.12,p.z)-environment.bankHeight(p.x-.12,p.z),gz=environment.bankHeight(p.x,p.z+.12)-environment.bankHeight(p.x,p.z-.12),len=Math.hypot(gx,gz)||1;
+    o.vx=THREE.MathUtils.damp(o.vx,-gx/len*.035,8,dt);o.vz=THREE.MathUtils.damp(o.vz,-gz/len*.035,8,dt);
+  }
+  const x=p.x,z=p.z,h=water.heightAt(x,z),dx=(water.heightAt(x+.12,z)-water.heightAt(x-.12,z))/.24,dz=(water.heightAt(x,z+.12)-water.heightAt(x,z-.12))/.24;
+  const curl=(water.motionAt(x+.12,z).vz-water.motionAt(x-.12,z).vz-water.motionAt(x,z+.12).vx+water.motionAt(x,z-.12).vx)/.24;
+  p.y=.024+h;o.yaw+=dt*(.035+THREE.MathUtils.clamp(curl*.5,-1.5,1.5));
+  o.mesh.rotation.set(-Math.atan(dx*Math.sin(o.yaw)+dz*Math.cos(o.yaw)),o.yaw,Math.atan(dx*Math.cos(o.yaw)-dz*Math.sin(o.yaw)));
+}
 stoneThrows.update(dt,time);
 for(let i=drops.length-1;i>=0;i--){const o=drops[i];o.v.y-=dt*9.8;o.mesh.position.addScaledVector(o.v,dt);o.mesh.scale.set(.8,1+Math.min(1.7,Math.abs(o.v.y)*.25),.8);if(o.mesh.position.y<water.heightAt(o.mesh.position.x,o.mesh.position.z)){water.disturb(o.mesh.position.x,o.mesh.position.z,.012);scene.remove(o.mesh);drops.splice(i,1);}}
 inlet.update(dt,time);water.update(dt,time);postFX.render(dt);frames++;fpsTime+=Math.max((now-fpsLast)/1000,.001);fpsLast=now;if(fpsTime>.5){ui.setFPS(Math.round(frames/fpsTime));frames=0;fpsTime=0;}}
