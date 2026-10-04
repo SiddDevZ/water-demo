@@ -19,8 +19,9 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setSize(innerWi
 renderer.shadowMap.enabled=true;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;THREE.DefaultLoadingManager.onLoad=()=>{renderer.shadowMap.needsUpdate=true;};renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
 const scene=new THREE.Scene();scene.background=null;scene.fog=null;
-const camera=new THREE.PerspectiveCamera(32,innerWidth/innerHeight,.1,240);camera.position.set(0,15.2,9.5);
-const controls=new OrbitControls(camera,canvas);controls.target.set(0,0,2.1);controls.enableDamping=true;controls.minDistance=8;controls.maxDistance=32;controls.maxPolarAngle=Math.PI*.475;controls.minPolarAngle=.25;controls.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.PAN,RIGHT:THREE.MOUSE.ROTATE};controls.touches={ONE:null,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.update();
+const initialCameraPosition=new THREE.Vector3(0,25.6,14.6),initialCameraTarget=new THREE.Vector3(0,0,2.1);
+const camera=new THREE.PerspectiveCamera(32,innerWidth/innerHeight,.1,240);camera.position.copy(initialCameraPosition);
+const controls=new OrbitControls(camera,canvas);controls.target.copy(initialCameraTarget);controls.enableDamping=true;controls.minDistance=8;controls.maxDistance=32;controls.maxPolarAngle=Math.PI*.475;controls.minPolarAngle=.25;controls.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.PAN,RIGHT:THREE.MOUSE.ROTATE};controls.touches={ONE:null,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.update();
 scene.add(new THREE.HemisphereLight('#eefcff','#bdcc74',1.05));
 // Side light shapes the stone and sends the canopy's dappled shadows across the bank.
 // Soft sky illumination preserves colour inside those shadows without flattening them.
@@ -82,7 +83,7 @@ function applySettings(value){
   skyUniforms.sunPosition.value.copy(sun.position).normalize();clouds.setSun(sun.position);water.setSun(sun.position,sun.color,sun.intensity);
   renderer.toneMappingExposure=appSettings.exposure;renderer.shadowMap.needsUpdate=true;
 }
-const ui=setupUI({initialSettings:appSettings,onSettings:applySettings, onTool:setTool,onReset:()=>{for(const o of [...debris,...drops])scene.remove(o.mesh);debris.length=drops.length=0;stoneThrows.reset();camera.position.set(0,15.2,9.5);controls.target.set(0,0,2.1);raining=false;setTool('stir');water.reset?.();life.reset();paperBoats.reset();ui.toast('A fresh moment of stillness');},onSound:toggleSound,onFullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.();},onCinematic:hideUI,onRecord:recordClip});
+const ui=setupUI({initialSettings:appSettings,onSettings:applySettings, onTool:setTool,onReset:()=>{for(const o of [...debris,...drops])scene.remove(o.mesh);debris.length=drops.length=0;stoneThrows.reset();camera.position.copy(initialCameraPosition);controls.target.copy(initialCameraTarget);raining=false;setTool('stir');water.reset?.();life.reset();paperBoats.reset();ui.toast('A fresh moment of stillness');},onSound:toggleSound,onFullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.();},onCinematic:hideUI,onRecord:recordClip});
 function getHit(e){
   const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);
   if(!raycaster.ray.intersectPlane(plane,hit))return false;

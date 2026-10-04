@@ -18,6 +18,10 @@ function icon(name){return `<svg viewBox="0 0 12 12" shape-rendering="crispEdges
 const tools=[['stir','Make waves','1'],['stone','Toss stone','2'],['leaf','Float a leaf','3'],['rain','Sunshower','4'],['feed','Feed koi','5'],['boat','Paper boat','6']];
 export function setupUI(callbacks={}){
  const root=document.querySelector('#ui');
+ // Keep the creator credit visible even when the interaction HUD is hidden.
+ let credit=document.querySelector('#creator-credit');
+ if(!credit){credit=document.createElement('a');credit.id='creator-credit';credit.className='creator-credit';document.body.appendChild(credit);}
+ credit.href='https://x.com/buildwithsid';credit.target='_blank';credit.rel='noopener noreferrer';credit.textContent='made by @buildwithsid';
  let settings=normalizeSettings(callbacks.initialSettings||loadSettings());
  document.body.dataset.waterTool='stir';
  root.innerHTML=`<header class="brand"><h1>komorebi<span class="title-mark">水</span></h1><p>A little spring, in bloom</p></header>
