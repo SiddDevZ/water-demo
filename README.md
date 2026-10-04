@@ -29,7 +29,7 @@ Import this repository with the repository root as the project root. `vercel.jso
 - **Touch:** tap a slot, then tap or drag the pond to interact. Use two fingers to orbit and zoom; desktop keyboard shortcuts are optional.
 - **H:** hide or restore the interface.
 
-The upper-right gear contains 22 live settings for water motion, optics, sunlight, stone throws, and how boats, koi, leaves and petals respond. Choose Natural, Glass, Cinematic or Playful presets; changes save locally. Settings reset and scene reset are separate. The panel also includes ambience, fullscreen and recording controls. Recording captures the canvas without the interface or audio, requesting up to 60 fps. Stop to download, or let the 30-second limit finish. Chromium normally produces WebM; actual capture rate depends on hardware.
+The upper-right gear contains 22 live settings for water motion, optics, sunlight, stone throws, and how boats, koi and leaves respond. Choose Natural, Glass, Cinematic or Playful presets; changes save locally. Settings reset and scene reset are separate. The panel also includes ambience, fullscreen and recording controls. Recording captures the canvas without the interface or audio, requesting up to 60 fps. Stop to download, or let the 30-second limit finish. Chromium normally produces WebM; actual capture rate depends on hardware.
 
 ## Surface simulation
 
@@ -51,9 +51,9 @@ This remains an interactive surface-wave approximation, **not a full Navier–St
 
 ## Spring life
 
-The default view looks down into an irregular blue pond with warm sandy shallows. Two cherry trees frame opposite corners; fine grass, ferns, cream/pink daisies and mossy rocks surround the open water. The opening scene contains six koi, one paper boat, four floating leaves and 44 pink petals. These counts describe startup; tools add objects and reset clears user-managed objects. There are no courtyard walls or paving in the active scene.
+The default view looks down into an irregular blue pond with warm sandy shallows. Two cherry trees frame opposite corners; fine grass, ferns, cream/pink daisies and mossy rocks surround the open water. The opening scene contains six koi, one paper boat, four floating leaves. These counts describe startup; tools add objects and reset clears user-managed objects. There are no courtyard walls or paving in the active scene.
 
-Koi bend their bodies and steer toward food or away from stone impacts. Shoreline clearance prevents them crossing dry shelves. Paper boats sample surface heights for heave, pitch and roll; hull-footprint checks keep them off shallow banks. Floating leaves and cherry petals follow the surface. These are lightweight interaction models.
+Koi bend their bodies and steer toward food or away from stone impacts. Shoreline clearance prevents them crossing dry shelves. Paper boats sample surface heights for heave, pitch and roll; hull-footprint checks keep them off shallow banks. Floating leaves follow the surface. These are lightweight interaction models.
 
 ## Assets
 

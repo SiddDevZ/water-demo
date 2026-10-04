@@ -9,7 +9,6 @@ import { createEnvironment } from './environment.js';
 import { createInlet } from './inlet.js';
 import { createStones } from './stones.js';
 import { enhanceCloudSky } from './cloud-sky.js';
-import { createPetals } from './petals.js';
 import { setupUI } from './ui.js';
 import { createPostFX } from './postfx.js';
 import {loadSettings,normalizeSettings} from './settings.js';
@@ -46,7 +45,6 @@ const postFX=createPostFX(renderer,scene,camera);
 const life=createLife(scene,water,environment.bankHeight);const paperBoats=createBoats(scene,water,environment.bankHeight);
 paperBoats.add(5.82,.23);
 paperBoats.boats[0].yaw=-.6;
-const petals=createPetals(scene,water,environment.bankHeight);
 let appSettings=loadSettings();
 let tool='stir',strength=.85,flow=.65,raining=false,time=0,down=false,strokePoint=null,audioCtx,audioGain,soundOn=false,cinematic=false;
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2(),plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),hit=new THREE.Vector3();
@@ -78,7 +76,7 @@ function setTool(value){water.endStir();strokePoint=null;tool=value;raining=valu
 function hideUI(){cinematic=!cinematic;document.querySelector('#ui').style.opacity=cinematic?'0':'1';document.querySelector('#ui').style.pointerEvents=cinematic?'none':'';}
 function applySettings(value){
   appSettings=normalizeSettings(value);strength=appSettings.stirStrength;flow=appSettings.wind;
-  water.setSettings(appSettings);stoneThrows.setSettings(appSettings);paperBoats.setSettings(appSettings);life.setSettings(appSettings);petals.setSettings(appSettings);
+  water.setSettings(appSettings);stoneThrows.setSettings(appSettings);paperBoats.setSettings(appSettings);life.setSettings(appSettings);
   const elevation=THREE.MathUtils.degToRad(appSettings.sunElevation),azimuth=THREE.MathUtils.degToRad(appSettings.sunAzimuth);
   sun.intensity=appSettings.sunIntensity;sun.position.set(Math.cos(azimuth)*Math.cos(elevation),Math.sin(elevation),Math.sin(azimuth)*Math.cos(elevation)).multiplyScalar(30);
   skyUniforms.sunPosition.value.copy(sun.position).normalize();clouds.setSun(sun.position);water.setSun(sun.position,sun.color,sun.intensity);
@@ -120,7 +118,7 @@ canvas.addEventListener('pointercancel',()=>{down=false;water.endStir();strokePo
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);postFX.resize(innerWidth,innerHeight);});
 let last=performance.now(),frames=0,fpsTime=0,fpsLast=performance.now(),lastShadowTime=-Infinity;
-function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.04);last=now;time+=dt;if(soundOn&&time>nextBird){birdsong();nextBird=time+8+Math.random()*9;}controls.update();if(down&&tool==='stir'&&strokePoint)water.stirSegment(strokePoint.x,strokePoint.z,strokePoint.x,strokePoint.z,strength,dt);clouds.update(dt,time);if(time-lastShadowTime>((down||stones.some(s=>!s.impacted)||life.getState().startled>0||paperBoats.boats.some(b=>Math.hypot(b.vx,b.vz)>.15))?1/30:1/15)){renderer.shadowMap.needsUpdate=true;lastShadowTime=time;}environment.update?.(dt,time);vegetation.update(dt,time);petals.update(dt,time);life.update(dt,time);paperBoats.update(dt,time,flow);if(pointerMark.visible)pointerMark.position.y=.045+water.heightAt(pointerMark.position.x,pointerMark.position.z);if(raining){for(let i=0;i<rainSeeds.length;i++){const p=rainSeeds[i];p.y-=dt*p.speed;p.x+=dt*.24;if(p.y<0){if(environment.bankHeight(p.x,p.z)<-.05)water.disturb(p.x,p.z,.055+.065*strength);p.y=8+Math.random()*5;p.x=(Math.random()-.5)*19;p.z=(Math.random()-.5)*15;}rainPositions.set([p.x,p.y,p.z,p.x-.007,p.y+.22,p.z],i*6);}rainGeometry.attributes.position.needsUpdate=true;}
+function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.04);last=now;time+=dt;if(soundOn&&time>nextBird){birdsong();nextBird=time+8+Math.random()*9;}controls.update();if(down&&tool==='stir'&&strokePoint)water.stirSegment(strokePoint.x,strokePoint.z,strokePoint.x,strokePoint.z,strength,dt);clouds.update(dt,time);if(time-lastShadowTime>((down||stones.some(s=>!s.impacted)||life.getState().startled>0||paperBoats.boats.some(b=>Math.hypot(b.vx,b.vz)>.15))?1/30:1/15)){renderer.shadowMap.needsUpdate=true;lastShadowTime=time;}environment.update?.(dt,time);vegetation.update(dt,time);life.update(dt,time);paperBoats.update(dt,time,flow);if(pointerMark.visible)pointerMark.position.y=.045+water.heightAt(pointerMark.position.x,pointerMark.position.z);if(raining){for(let i=0;i<rainSeeds.length;i++){const p=rainSeeds[i];p.y-=dt*p.speed;p.x+=dt*.24;if(p.y<0){if(environment.bankHeight(p.x,p.z)<-.05)water.disturb(p.x,p.z,.055+.065*strength);p.y=8+Math.random()*5;p.x=(Math.random()-.5)*19;p.z=(Math.random()-.5)*15;}rainPositions.set([p.x,p.y,p.z,p.x-.007,p.y+.22,p.z],i*6);}rainGeometry.attributes.position.needsUpdate=true;}
 for(const o of debris){
   const p=o.mesh.position,motion=water.motionAt(p.x,p.z);
   o.vx=THREE.MathUtils.damp(o.vx||0,motion.vx*appSettings.floatResponse+Math.sin(time*.3+o.seed)*.025,5,dt);
@@ -138,4 +136,4 @@ for(const o of debris){
 stoneThrows.update(dt,time);
 for(let i=drops.length-1;i>=0;i--){const o=drops[i];o.v.y-=dt*9.8;o.mesh.position.addScaledVector(o.v,dt);o.mesh.scale.set(.8,1+Math.min(1.7,Math.abs(o.v.y)*.25),.8);if(o.mesh.position.y<water.heightAt(o.mesh.position.x,o.mesh.position.z)){water.disturb(o.mesh.position.x,o.mesh.position.z,.012);scene.remove(o.mesh);drops.splice(i,1);}}
 inlet.update(dt,time);water.update(dt,time);postFX.render(dt);frames++;fpsTime+=Math.max((now-fpsLast)/1000,.001);fpsLast=now;if(fpsTime>.5){ui.setFPS(Math.round(frames/fpsTime));frames=0;fpsTime=0;}}
-applySettings(appSettings);requestAnimationFrame(frame);window.__komorebi={scene,camera,renderer,postFX,water,environment,vegetation,sky,clouds,petals,inlet,life,paperBoats,controls,setTool,splash,debris,stones,stoneThrows,applySettings,getSettings:()=>({...appSettings}),sun};
+applySettings(appSettings);requestAnimationFrame(frame);window.__komorebi={scene,camera,renderer,postFX,water,environment,vegetation,sky,clouds,inlet,life,paperBoats,controls,setTool,splash,debris,stones,stoneThrows,applySettings,getSettings:()=>({...appSettings}),sun};
