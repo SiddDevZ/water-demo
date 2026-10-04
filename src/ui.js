@@ -21,7 +21,7 @@ export function setupUI(callbacks={}){
  // Keep the creator credit visible even when the interaction HUD is hidden.
  let credit=document.querySelector('#creator-credit');
  if(!credit){credit=document.createElement('a');credit.id='creator-credit';credit.className='creator-credit';document.body.appendChild(credit);}
- credit.href='https://x.com/buildwithsid';credit.target='_blank';credit.rel='noopener noreferrer';credit.textContent='made by @buildwithsid';
+ credit.href='https://x.com/buildwithsid';credit.target='_blank';credit.rel='noopener noreferrer';credit.innerHTML='made by <span>@buildwithsid</span>';
  let settings=normalizeSettings(callbacks.initialSettings||loadSettings());
  document.body.dataset.waterTool='stir';
  root.innerHTML=`<header class="brand"><h1>komorebi<span class="title-mark">水</span></h1><p>A little spring, in bloom</p></header>
